@@ -44,6 +44,43 @@ public final class M17Receiver {
     /** AtoM17: every frame the receiver tracks, as 192 equalised symbols (the exact re-encoded symbols where the frame is
      *  confirmed), in air order, for re-synthesis into libm17rx. */
     public interface SymbolTap { void symbols(float[] s192); }
+
+    /**
+     * AtoM17: per-frame measurements on the equaliser itself, before any frame is re-encoded for libm17rx (whose own
+     * EVM, deviation and offset then describe the re-synthesised signal, not the radio's). Symbols are in M17 units
+     * (+-1, +-3); the eye is the equaliser's INPUT (the radio's audio) around 16 symbol instants of the frame, scaled so
+     * the preamble's RMS is 3.
+     */
+    public static final class Stats {
+        public float[] soft;                 // 192 equaliser outputs
+        public int symErrors = -1;           // of the 184 after the sync: decisions that differ from the frame as decoded and re-encoded; -1 = unknown
+        public int syncHits;                 // of 8 sync symbols
+        public float mse;                    // mean squared decision error, symbol units
+        public float metric = Float.NaN;     // Viterbi path metric (more negative = better)
+        public int lichErrors = -1;          // Golay corrections in the LICH
+        public boolean confirmed, packet;
+        public float gain;                   // preamble RMS of the input, audio counts
+        public float[] eye; public int eyeTraces;
+    }
+    public interface StatsTap { void frame(Stats s); }
+    public volatile StatsTap stats;
+    public static final int EYE_POINTS = 21, EYE_TRACES = 16;
+
+    private void stats(float[] sym, float mse, int syncHits, int[] exact, M17.Stream st, boolean confirmed, boolean packet) {
+        StatsTap t = stats; if (t == null) return;
+        Stats s = new Stats();
+        s.soft = sym.clone(); s.mse = mse; s.syncHits = syncHits; s.confirmed = confirmed; s.packet = packet; s.gain = gain;
+        if (exact != null && exact.length == 192) { int m = 0; for (int i = 8; i < 192; i++) if ((int) slice(sym[i]) != exact[i]) m++; s.symErrors = m; }
+        if (st != null) { s.metric = st.metric; s.lichErrors = st.lich != null ? st.lichErrors : -1; }
+        s.eye = new float[EYE_TRACES * EYE_POINTS];
+        float k = gain > 0 ? 3f / gain : 0f;
+        for (int tr = 0; tr < EYE_TRACES; tr++) {
+            long c = chosen + (long) (8 + tr * 11) * SPS48;
+            for (int j = 0; j < EYE_POINTS; j++) s.eye[tr * EYE_POINTS + j] = at(c + j - EYE_POINTS / 2) * k;
+        }
+        s.eyeTraces = EYE_TRACES;
+        t.frame(s);
+    }
     public volatile SymbolTap tap;
     private void emit(float[] s) { SymbolTap t = tap; if (t != null) t.symbols(s.clone()); }
     private void emit(int[] s) { SymbolTap t = tap; if (t == null) return; float[] f = new float[192]; for (int i = 0; i < 192 && i < s.length; i++) f[i] = s[i]; t.symbols(f); }
@@ -289,6 +326,7 @@ public final class M17Receiver {
             s = s2; sym = sym2; confirmed = s.lich != null && s.lichErrors <= 2 && s.metric < -150; exact = s.lich != null ? M17.streamSymbolsFromLich(s.lich, s.fn, s.payload) : null;
         }
         int mism = 999; if (exact != null) { mism = 0; for (int i = 8; i < 192; i++) if ((int) slice(sym[i]) != exact[i]) mism++; }
+        stats(sym, mse, sm, exact, s, confirmed, false);
         // consistent: the frame re-encoded from its decoded LICH and payload matches the received symbols but for a few (a
         // random or wrongly decoded frame differs in about 140 of 184; confirmed frames 0-16, unconfirmed ones mostly 5-28): its
         // re-encoding is then the history for the next frame even when the LICH's Golay words needed more than two corrections
@@ -323,7 +361,7 @@ public final class M17Receiver {
 
     /** A packet frame. Voice frames never come here: this state is entered only from a packet-mode LSF. */
     private void packetFrame() {
-        long p0 = next48; float[] sym = new float[192]; trackFrame(p0, sym);
+        long p0 = next48; float[] sym = new float[192]; float pmse = trackFrame(p0, sym);
         int pm = 0, em = 0;
         for (int i = 0; i < 8; i++) {
             int s = (int) slice(sym[i]);
@@ -332,6 +370,8 @@ public final class M17Receiver {
         }
         if (em >= 7 && em > pm) { emitEot(); end("end of transmission"); return; }
         M17.Packet dec = M17.decodePacket(sym, 8);
+        int[] pex = toInts(M17.packetSymbols(dec.chunk, dec.eof, dec.counter));
+        if (pm >= 6) stats(sym, pmse, pm, pex, null, false, true);
         emit(M17.packetSymbols(dec.chunk, dec.eof, dec.counter));       // re-encoded from this receiver's decode: clean for libm17rx
         if (pm < 6) { if (++lost >= 2) { end("signal lost"); return; } return; }
         lost = 0; frames++;
@@ -369,6 +409,11 @@ public final class M17Receiver {
         if (l.crcOk) { lsfFromLichSent = true; lsf = l; listener.lsfFromLich(l); }
     }
 
+    private static int[] toInts(Object a) {
+        if (a instanceof int[]) return (int[]) a;
+        if (a instanceof float[]) { float[] f = (float[]) a; int[] r = new int[f.length]; for (int i = 0; i < f.length; i++) r[i] = Math.round(f[i]); return r; }
+        return null;
+    }
     private void emitEot() { float[] e = new float[192]; for (int i = 0; i < 192; i++) e[i] = M17.EOT_SYMBOLS[i % M17.EOT_SYMBOLS.length]; emit(e); }
     private void end(String why) { listener.ended(frames, good, why); reset(null); }
     private void reset(String why) { heldFrames.clear(); heldQuality.clear(); state = State.IDLE; strong = 0; preStart48 = preEnd48 = -1; latePending = false; lateCall = false; lateFloor48 = Math.max(lateFloor48, next48); }

@@ -1,0 +1,85 @@
+# AtoM17: build the APK on every push and pull request; on a tag v*, attach it to a GitHub release.
+#
+# Signing: set these repository secrets (Settings > Secrets and variables > Actions) so every build installs over
+# the previous one:
+#   ATOM17_KEYSTORE_B64        base64 of a .jks keystore   (keytool -genkeypair -v -keystore atom17.jks -keyalg RSA
+#                                                            -keysize 4096 -validity 10000 -alias atom17; base64 -w0 atom17.jks)
+#   ATOM17_KEYSTORE_PASSWORD   its store password
+#   ATOM17_KEY_ALIAS           atom17
+#   ATOM17_KEY_PASSWORD        the key's password
+# Without them the APK is signed with the runner's throw-away debug key: it works, but each one needs an uninstall
+# (which deletes the app's settings and keys) before it installs.
+name: build
+
+on:
+  push:
+    branches: [ "**" ]
+    tags: [ "v*" ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write          # for the release on a tag
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - uses: android-actions/setup-android@v3
+
+      - name: SDK packages
+        run: sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.3.11579264" "cmake;3.22.1"
+
+      - name: Release key
+        env:
+          KS: ${{ secrets.ATOM17_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS" ]; then
+            echo "$KS" | base64 -d > "$RUNNER_TEMP/atom17.jks"
+            echo "ATOM17_KEYSTORE=$RUNNER_TEMP/atom17.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::no ATOM17_KEYSTORE_B64 secret: the APK is signed with a throw-away debug key"
+          fi
+
+      - name: Build
+        env:
+          ATOM17_KEYSTORE_PASSWORD: ${{ secrets.ATOM17_KEYSTORE_PASSWORD }}
+          ATOM17_KEY_ALIAS: ${{ secrets.ATOM17_KEY_ALIAS }}
+          ATOM17_KEY_PASSWORD: ${{ secrets.ATOM17_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          v=$(sed -n "s/.*versionName '\(.*\)'.*/\1/p" app/build.gradle)
+          cp app/build/outputs/apk/release/app-release.apk "AtoM17-$v.apk"
+          sha256sum "AtoM17-$v.apk" | tee "AtoM17-$v.apk.sha256"
+
+      - name: Host test of the M17 core
+        run: |
+          C=app/src/main/cpp; T=$C/third_party; N=$T/codec2-mod-neural
+          gcc -O2 -std=gnu11 -w -DSUPPRESS_PERF_WARNINGS -o loopback tools/hosttest/loopback.c $C/m17tx.c $C/m17rx/src/*.c \
+            $T/libm17/m17.c $T/libm17/{decode,encode,math,payload,phy}/*.c $T/codec2-mod/src/*.c $T/micro-ecc/uECC.c $T/tinier-aes/aes.c \
+            $N/src/c2fargan.c $N/src/c2f_features.c $N/model/fargan_data.c $N/third_party/opus/dnn/{fargan,nnet,nnet_default,parse_lpcnet_weights}.c \
+            -I$C -I$C/m17rx/include -I$C/m17rx/src -I$T/libm17 -I$T/codec2-mod/inc -I$T/micro-ecc -I$T/tinier-aes \
+            -I$N/include -I$N/src -I$N/model -I$N/third_party/opus -I$N/third_party/opus/dnn -I$N/third_party/opus/celt -I$N/third_party/opus/include \
+            -Itools/hosttest -lm
+          ./loopback
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AtoM17-apk
+          path: AtoM17-*.apk*
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: AtoM17-*.apk*
+          generate_release_notes: true

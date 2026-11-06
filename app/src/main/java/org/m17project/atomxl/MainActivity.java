@@ -427,10 +427,13 @@ public final class MainActivity extends Activity implements Station.Listener {
                 JSONObject l = lastStatus.optJSONObject("link");
                 boolean lsf = l != null && l.optInt("valid") != 0;
                 StringBuilder b = new StringBuilder("Sync · ").append(!lsf ? "no LSF yet" : l.optInt("fromLich") != 0 ? "LSF from LICH" : "LSF OK");
-                double evm = lastStatus.optDouble("evm", 0);
-                if (lastStatus.optInt("measValid") != 0)
-                    b.append(String.format(Locale.US, " · EVM %.1f %% · %+.0f Hz · lost %d", evm, lastStatus.optDouble("offset", 0), lastStatus.optInt("lost")));
-                color = lastStatus.optInt("measValid") != 0 && evm > 8 ? Ui.WARN : Ui.OK;
+                // measured on the equaliser (RxStats): libm17rx sees a re-synthesised signal
+                RxStats.Snap q = st.rxStats.snap();
+                boolean fresh = q.lastAt > 0 && System.currentTimeMillis() - q.lastAt < 2000;
+                if (fresh && !Float.isNaN(q.ser)) b.append(String.format(Locale.US, " · SER %.1f %%", 100 * q.ser));
+                if (fresh && !Float.isNaN(q.evm)) b.append(String.format(Locale.US, " · EQ EVM %.1f %%", q.evm));
+                b.append(" · lost ").append(lastStatus.optInt("lost"));
+                color = fresh && !Float.isNaN(q.ser) ? (q.ser < 0.02f ? Ui.OK : q.ser < 0.06f ? Ui.WARN : Ui.BAD) : Ui.OK;
                 s = b.toString();
             }
         }
@@ -575,7 +578,7 @@ public final class MainActivity extends Activity implements Station.Listener {
         sm.setMaxLines(2); sm.setEllipsize(android.text.TextUtils.TruncateAt.END);
         mid.addView(sm);
         l.addView(mid, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
-        if (e.ended && e.evm > 0) l.addView(Ui.mono(this, String.format(Locale.US, "%.1f %%", e.evm), 11.5f, Ui.TEXT3));
+        if (e.ended && !Float.isNaN(e.ser)) l.addView(Ui.mono(this, String.format(Locale.US, "SER %.1f %%", 100 * e.ser), 11.5f, Ui.TEXT3));
         l.setOnClickListener(v -> details(e));
         return l;
     }
@@ -588,7 +591,8 @@ public final class MainActivity extends Activity implements Station.Listener {
         b.append(e.src.isEmpty() ? "?" : e.src).append(" → ").append(e.dst.isEmpty() ? "?" : e.dst);
         if ("stream".equals(e.kind)) {
             b.append(" · CAN ").append(e.can);
-            if (e.ended) b.append(String.format(Locale.US, "\n%.1f s, %d frames%s, EVM %.1f %%", e.duration, e.frames, e.lost > 0 ? " (" + e.lost + " lost)" : "", e.evm));
+            if (e.ended) b.append(String.format(Locale.US, "\n%.1f s, %d frames%s", e.duration, e.frames, e.lost > 0 ? " (" + e.lost + " lost)" : ""))
+                    .append(Float.isNaN(e.ser) ? "" : String.format(Locale.US, "\nsymbol errors %.1f %%, equaliser EVM %.1f %%", 100 * e.ser, e.evm));
             else b.append("\non air");
             if (e.enc == 1) b.append("\nscrambler ").append(8 * (e.encSub + 1)).append("-bit, ").append(e.decrypt == 1 ? "descrambled" : "no seed: muted");
             if (e.enc == 2) b.append("\nAES-").append(128 + 64 * e.encSub).append(", ").append(e.decrypt == 1 ? "decrypted" : "no key: muted");

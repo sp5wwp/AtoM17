@@ -11,15 +11,28 @@ android {
         applicationId 'org.m17project.atomxl'
         minSdk 29
         targetSdk 30          // the Atom XL runs Android 11
-        versionCode 12
-        versionName '0.3.1'
+        versionCode 13
+        versionName '0.3.2'
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }
         externalNativeBuild { cmake { arguments "-DSDALSA_ASSET_DIR=${sdalsaAssets.absolutePath.replace(File.separator, '/')}" } }
     }
     externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt'; version '3.22.1' } }
     sourceSets { main { assets.srcDirs += sdalsaAssets } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
-    buildTypes { release { minifyEnabled false; signingConfig signingConfigs.debug } }
+    // A fixed release key, when given (CI: repository secrets; see .github/workflows/build.yml), so every build installs
+    // over the last one. Without it, release builds are signed with the local debug key, as before.
+    def ks = System.getenv('ATOM17_KEYSTORE')
+    signingConfigs {
+        if (ks) {
+            fixed {
+                storeFile file(ks)
+                storePassword System.getenv('ATOM17_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ATOM17_KEY_ALIAS')
+                keyPassword System.getenv('ATOM17_KEY_PASSWORD')
+            }
+        }
+    }
+    buildTypes { release { minifyEnabled false; signingConfig ks ? signingConfigs.fixed : signingConfigs.debug } }
     lint { abortOnError false; checkReleaseBuilds false }
 }
 

@@ -44,7 +44,7 @@ final class Station implements Radio.Events, Audio.Sink {
         String src = "", dst = "", text = "", sms = "", meta = "", gnss = "", ecd = "", sigKey = "";
         int can, enc, encSub, decrypt, sig = -1, frames, lost, metaKind, protocol;
         boolean signed, fromLich, ended;
-        float duration, evm;
+        float duration, evm, ser = Float.NaN;   // evm, ser: the equaliser's (RxStats) at the end
         /** for the main screen's stream card */
         int dataType, station = -1, bearing;
         boolean posValid, altValid, spdValid;
@@ -209,7 +209,7 @@ final class Station implements Radio.Events, Audio.Sink {
         // M17: wide FM, squelch open and no tones, so the demodulator gets the audio continuously (SignalDeck does the same)
         boolean ok = radio.setAnalog(cmd, cmd, m17 || cfg.wide(), cfg.high(), m17 ? 0 : cfg.squelch(), m17 ? 0 : cfg.rxTone(), m17 ? 0 : cfg.txTone(), cfg.volume());
         log("channel " + Config.mhz(hz) + " MHz " + (m17 ? "M17" : "FM") + (cmd != hz ? String.format(java.util.Locale.US, " (%.1f ppm: %d Hz sent)", cfg.ppm(), cmd) : "") + (ok ? "" : " (refused)"));
-        if (m17) { synchronized (rxLock) { M17Native.rxReset(rxh); } configureRx(); symQueue.clear(); initDfe(); }
+        if (m17) { synchronized (rxLock) { M17Native.rxReset(rxh); } configureRx(); symQueue.clear(); rxStats.reset(); initDfe(); }
         evalCapture();
     }
 
@@ -306,10 +306,13 @@ final class Station implements Radio.Events, Audio.Sink {
                 @Override public void ended(int frames, int good, String why) { log("equaliser: " + frames + " frames, " + good + " confirmed (" + why + ")"); }
             });
             r.tap = symQueue::add;
+            r.stats = rxStats::add;
             dfe = r;
         } catch (Throwable t) { log("equaliser: " + t); }
     }
     volatile float dfeQuality;
+    /** Receive measurements on the equaliser (Bench › Receive signal, the main status line). */
+    final RxStats rxStats = new RxStats();
     private final short[] dec = new short[4096];
     private long statusAt;
 
@@ -365,7 +368,8 @@ final class Station implements Radio.Events, Audio.Sink {
             fillLink(r, l);
             if (kind == M17Native.EV_STREAM_END) {
                 r.ended = true; r.frames = e.getInt("frames"); r.lost = e.getInt("lost"); r.duration = (float) e.getDouble("duration");
-                r.evm = (float) e.getDouble("evm"); r.sig = r.signed ? e.getInt("sig") : -1; r.sigKey = e.getString("sigKey");
+                RxStats.Snap q = rxStats.snap();                                 // the equaliser's, not libm17rx's (re-synthesised input)
+                r.evm = Float.isNaN(q.evm) ? 0 : q.evm; r.ser = q.ser; r.sig = r.signed ? e.getInt("sig") : -1; r.sigKey = e.getString("sigKey");
                 current = null;
                 log("M17 " + r.src + " > " + r.dst + ": " + r.frames + " frames, " + String.format(java.util.Locale.US, "%.1f s", r.duration));
             } else if (kind == M17Native.EV_PACKET) {

@@ -20,6 +20,9 @@
     </LinearLayout>
 
     <LinearLayout android:id="@+id/grpBench" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView style="@style/Head" android:text="Receive signal (M17)" />
+        <LinearLayout android:id="@+id/signalBox" style="@style/Group" />
+        <TextView style="@style/Note" android:text="Measured on the equaliser, from the radio's audio: libm17rx decodes a re-synthesised signal, so its own EVM, deviation and offset would describe that instead. The Atom's audio path removes DC, so the carrier offset cannot be measured here." />
         <TextView style="@style/Head" android:text="Transmit test" />
         <LinearLayout style="@style/Group">
             <Button android:id="@+id/testTx" style="@style/Big" android:text="M17 test: 10 s of a 1 kHz tone" />

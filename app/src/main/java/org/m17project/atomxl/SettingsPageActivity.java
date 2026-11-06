@@ -67,6 +67,7 @@ public final class SettingsPageActivity extends Activity implements Station.List
                 getLayoutInflater().inflate(R.layout.tab_device, body, true);
                 only(DEVICE_GROUPS, new int[] { page.equals("ptt") ? R.id.grpPtt : page.equals("bench") ? R.id.grpBench : R.id.grpAbout });
                 bindDevice();
+                if (page.equals("bench")) buildSignal();
             }
         }
     }
@@ -91,7 +92,56 @@ public final class SettingsPageActivity extends Activity implements Station.List
         Button rec = findViewById(R.id.record);
         if (rec != null) rec.setText(st.isRecording() ? "Recording…" : "Record M17 receive audio (30 s)");
     }
-    @Override public void onStatus(org.json.JSONObject s) { }
+    @Override public void onStatus(org.json.JSONObject s) { showSignal(); }
+
+    // ---- Bench › Receive signal ----
+
+    private TextView[] sigVal;
+    private ScopeView eye, hist, history;
+    private TextView sigAge;
+
+    private void buildSignal() {
+        LinearLayout box = findViewById(R.id.signalBox);
+        if (box == null) return;
+        String[] labels = { "Symbol errors (pre-FEC)", "Equaliser EVM", "Sync symbols", "LICH corrections", "Viterbi metric", "Frames · confirmed",
+                "Level (preamble RMS)", "Inner / outer levels" };
+        sigVal = new TextView[labels.length];
+        android.view.View[] cells = new android.view.View[labels.length];
+        for (int i = 0; i < labels.length; i++) { sigVal[i] = Ui.value(this); sigVal[i].setTypeface(Ui.MONO_B); cells[i] = Ui.cell(this, labels[i], sigVal[i]); }
+        sigAge = Ui.text(this, "", 12, Ui.TEXT3, false);
+        box.addView(sigAge);
+        box.addView(Ui.grid(this, cells), Ui.matchWrap(this, 6));
+        eye = new ScopeView(this, ScopeView.Mode.EYE);
+        hist = new ScopeView(this, ScopeView.Mode.HIST);
+        history = new ScopeView(this, ScopeView.Mode.HISTORY);
+        box.addView(Ui.label(this, "Eye · the radio's audio before the equaliser"), Ui.matchWrap(this, 12));
+        box.addView(eye, Ui.matchWrap(this, 4));
+        box.addView(Ui.label(this, "Equalised symbol levels (−3 −1 +1 +3)"), Ui.matchWrap(this, 12));
+        box.addView(hist, Ui.matchWrap(this, 4));
+        box.addView(Ui.label(this, "Symbol errors per frame (last 64)"), Ui.matchWrap(this, 12));
+        box.addView(history, Ui.matchWrap(this, 4));
+        showSignal();
+    }
+
+    private void showSignal() {
+        if (sigVal == null) return;
+        RxStats.Snap s = st.rxStats.snap();
+        long age = s.lastAt == 0 ? -1 : (System.currentTimeMillis() - s.lastAt) / 1000;
+        sigAge.setText(!cfg.m17() ? "Switch to M17 to measure." : age < 0 ? "Waiting for an M17 signal…" : age < 2 ? "Receiving" : "Last frame " + age + " s ago");
+        float ser = s.ser;
+        set(0, Float.isNaN(ser) ? "—" : String.format(Locale.US, "%.1f %%", 100 * ser) + (Float.isNaN(s.serNow) ? "" : String.format(Locale.US, " (%d/184)", Math.round(s.serNow * 184))),
+                Float.isNaN(ser) ? Ui.WHITE : ser < 0.02f ? Ui.OK : ser < 0.06f ? Ui.WARN : Ui.BAD);
+        set(1, Float.isNaN(s.evm) ? "—" : String.format(Locale.US, "%.1f %%", s.evm), Ui.WHITE);
+        set(2, s.syncHits < 0 ? "—" : s.syncHits + "/8", s.syncHits == 8 ? Ui.OK : s.syncHits >= 6 ? Ui.WHITE : Ui.WARN);
+        set(3, s.lichErrors < 0 ? "—" : String.valueOf(s.lichErrors), Ui.WHITE);
+        set(4, Float.isNaN(s.metric) ? "—" : String.format(Locale.US, "%.0f", s.metric), Ui.WHITE);
+        set(5, s.frames == 0 ? "—" : s.frames + " · " + s.confirmedPct + " %", Ui.WHITE);
+        set(6, Float.isNaN(s.levelDb) ? "—" : String.format(Locale.US, "%.1f dBFS", s.levelDb), Ui.WHITE);
+        set(7, Float.isNaN(s.innerOuter) ? "—" : String.format(Locale.US, "%.3f (1/3 nominal)", s.innerOuter), Ui.WHITE);
+        eye.set(s); hist.set(s); history.set(s);
+    }
+
+    private void set(int i, String v, int color) { sigVal[i].setText(v); sigVal[i].setTextColor(color); }
     @Override public void onRx(Station.RxEntry e) { }
 
     private void bindRadio() {
