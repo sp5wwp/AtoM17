@@ -1,6 +1,6 @@
 /*
- * AtoM17 - the Bench's receive plots, from RxStats: the eye of the radio's audio before the equaliser, the histogram of
- * the equaliser's outputs, and the symbol error rate per frame.
+ * AtoM17 - the Bench's receive plots, from RxStats: the eye of the equalised symbols (raised-cosine shaped), the
+ * histogram of the equaliser's outputs, and the symbol error rate per frame.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 package org.m17project.atomxl;
@@ -10,7 +10,6 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.view.View;
 
-import org.m17project.atomxl.dfe.M17Receiver;
 
 final class ScopeView extends View {
     enum Mode { EYE, HIST, HISTORY }
@@ -21,7 +20,7 @@ final class ScopeView extends View {
     ScopeView(Context c, Mode m) {
         super(c);
         mode = m;
-        line.setColor(0x59FFC37A); line.setStrokeWidth(Ui.dp(c, 1.2f));
+        line.setColor(0x38FFFFFF); line.setStrokeWidth(Ui.dp(c, 1f));
         grid.setColor(0x33FFFFFF); grid.setStrokeWidth(1);
         bar.setColor(0xFFF59A23);
         text.setColor(0xFFC9D8E5); text.setTextSize(Ui.dp(c, 10)); text.setTypeface(Ui.MONO);
@@ -31,7 +30,7 @@ final class ScopeView extends View {
 
     @Override protected void onMeasure(int w, int h) {
         int width = MeasureSpec.getSize(w);
-        setMeasuredDimension(width, (int) (width * (mode == Mode.HISTORY ? 0.30f : 0.50f)));
+        setMeasuredDimension(width, (int) (width * (mode == Mode.HISTORY ? 0.30f : mode == Mode.EYE ? 0.62f : 0.50f)));
     }
 
     @Override protected void onDraw(Canvas c) {
@@ -45,15 +44,23 @@ final class ScopeView extends View {
     private static float y(float v, float h) { return h / 2 - v * h / 9f; }
 
     private void eye(Canvas c, float w, float h) {
-        for (int lv = -3; lv <= 3; lv += 2) c.drawLine(0, y(lv, h), w, y(lv, h), grid);
-        c.drawLine(w / 2, 0, w / 2, h, grid);
+        for (int th = -2; th <= 2; th += 2) dashed(c, 0, y(th, h), w, y(th, h), Ui.dp(getContext(), 4));   // decision thresholds
+        dashed(c, w / 2, 0, w / 2, h, Ui.dp(getContext(), 2));                                               // the symbol instant
         if (snap == null || snap.eyeN == 0) { empty(c, w, h); return; }
-        int P = M17Receiver.EYE_POINTS;
+        int P = RxStats.EYE_POINTS;
         for (int t = 0; t < snap.eyeN; t++)
             for (int i = 1; i < P; i++) {
                 float x0 = (i - 1) * w / (P - 1), x1 = i * w / (P - 1);
                 c.drawLine(x0, y(snap.eye[t * P + i - 1], h), x1, y(snap.eye[t * P + i], h), line);
             }
+    }
+
+    private void dashed(Canvas c, float x0, float y0, float x1, float y1, float dash) {
+        float len = (float) Math.hypot(x1 - x0, y1 - y0);
+        for (float d = 0; d < len; d += 2 * dash) {
+            float a = d / len, b = Math.min(1, (d + dash) / len);
+            c.drawLine(x0 + (x1 - x0) * a, y0 + (y1 - y0) * a, x0 + (x1 - x0) * b, y0 + (y1 - y0) * b, grid);
+        }
     }
 
     private void hist(Canvas c, float w, float h) {

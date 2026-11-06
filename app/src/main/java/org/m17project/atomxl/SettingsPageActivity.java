@@ -114,7 +114,7 @@ public final class SettingsPageActivity extends Activity implements Station.List
         eye = new ScopeView(this, ScopeView.Mode.EYE);
         hist = new ScopeView(this, ScopeView.Mode.HIST);
         history = new ScopeView(this, ScopeView.Mode.HISTORY);
-        box.addView(Ui.label(this, "Eye · the radio's audio before the equaliser"), Ui.matchWrap(this, 12));
+        box.addView(Ui.label(this, "Eye · equalised symbols, raised-cosine shaped"), Ui.matchWrap(this, 12));
         box.addView(eye, Ui.matchWrap(this, 4));
         box.addView(Ui.label(this, "Equalised symbol levels (−3 −1 +1 +3)"), Ui.matchWrap(this, 12));
         box.addView(hist, Ui.matchWrap(this, 4));

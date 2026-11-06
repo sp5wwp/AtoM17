@@ -9,7 +9,26 @@ package org.m17project.atomxl;
 import org.m17project.atomxl.dfe.M17Receiver;
 
 final class RxStats {
-    static final int HIST_BINS = 64, HISTORY = 64, EYE_KEEP = 64;
+    static final int HIST_BINS = 64, HISTORY = 64, EYE_KEEP = 240;
+    /** Eye traces: two symbols, 10 points a symbol (the symbol instants at 0, 10 and 20). */
+    static final int EYE_POINTS = 21, EYE_SPS = 10, EYE_PER_FRAME = 24;
+    /**
+     * Raised cosine, roll-off 0.5 (M17's RRC at both ends), at 10 samples a symbol over +-4 symbols: the equalised
+     * symbols are drawn as the matched-filter output an ideal receiver would see, the way SDR#'s plugin draws its eye.
+     * Its spread at the symbol instants is the equaliser's real scatter; the curves between them are this pulse.
+     */
+    private static final int RC_SPAN = 4;
+    private static final float[] RC = new float[2 * RC_SPAN * EYE_SPS + 1];
+    static {
+        double a = 0.5;
+        for (int i = 0; i < RC.length; i++) {
+            double t = (i - RC_SPAN * EYE_SPS) / (double) EYE_SPS;
+            double sinc = t == 0 ? 1 : Math.sin(Math.PI * t) / (Math.PI * t);
+            double d = 1 - 4 * a * a * t * t;
+            double c = Math.abs(d) < 1e-9 ? Math.PI / 4 : Math.cos(Math.PI * a * t) / d;
+            RC[i] = (float) (sinc * c);
+        }
+    }
     static final float HIST_SPAN = 4.5f;               // the histogram covers -4.5 .. +4.5
 
     /** One consistent copy for the UI. */
@@ -24,7 +43,7 @@ final class RxStats {
         final float[] hist = new float[HIST_BINS];
         final float[] history = new float[HISTORY];    // per-frame SER, oldest first
         int historyN;
-        final float[] eye = new float[EYE_KEEP * M17Receiver.EYE_POINTS];
+        final float[] eye = new float[EYE_KEEP * EYE_POINTS];
         int eyeN;
     }
 
@@ -64,9 +83,20 @@ final class RxStats {
         for (int i = 0; i < HIST_BINS; i++) s.hist[i] *= 0.92f;          // about the last dozen frames
         if (innerN > 0 && outerN > 0) s.innerOuter = (float) ((innerSum / innerN) / (outerSum / outerN));
         if (innerN + outerN > 20000) { innerSum *= 0.5; outerSum *= 0.5; innerN /= 2; outerN /= 2; }
-        int P = M17Receiver.EYE_POINTS;
-        for (int t = 0; t < f.eyeTraces; t++) {
-            System.arraycopy(f.eye, t * P, s.eye, eyeHead * P, P);
+        // eye: traces centred on symbols spread over the frame, from one symbol before to one after
+        float[] y = f.soft;
+        int first = 8 + RC_SPAN + 1, last = y.length - RC_SPAN - 2;
+        for (int t = 0; t < EYE_PER_FRAME; t++) {
+            int k = first + (int) ((long) t * (last - first) / (EYE_PER_FRAME - 1));
+            int base = eyeHead * EYE_POINTS;
+            for (int j = 0; j < EYE_POINTS; j++) {
+                float pos = k - 1 + j / (float) EYE_SPS, v = 0;     // time in symbols
+                for (int i = k - 1 - RC_SPAN; i <= k + 1 + RC_SPAN; i++) {
+                    int r = Math.round((pos - i) * EYE_SPS) + RC_SPAN * EYE_SPS;
+                    if (r >= 0 && r < RC.length && i >= 0 && i < y.length) v += y[i] * RC[r];
+                }
+                s.eye[base + j] = v;
+            }
             eyeHead = (eyeHead + 1) % EYE_KEEP;
             if (s.eyeN < EYE_KEEP) s.eyeN++;
         }

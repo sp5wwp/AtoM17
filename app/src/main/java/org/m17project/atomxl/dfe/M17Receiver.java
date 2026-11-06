@@ -48,8 +48,7 @@ public final class M17Receiver {
     /**
      * AtoM17: per-frame measurements on the equaliser itself, before any frame is re-encoded for libm17rx (whose own
      * EVM, deviation and offset then describe the re-synthesised signal, not the radio's). Symbols are in M17 units
-     * (+-1, +-3); the eye is the equaliser's INPUT (the radio's audio) around 16 symbol instants of the frame, scaled so
-     * the preamble's RMS is 3.
+     * (+-1, +-3).
      */
     public static final class Stats {
         public float[] soft;                 // 192 equaliser outputs
@@ -60,11 +59,9 @@ public final class M17Receiver {
         public int lichErrors = -1;          // Golay corrections in the LICH
         public boolean confirmed, packet;
         public float gain;                   // preamble RMS of the input, audio counts
-        public float[] eye; public int eyeTraces;
     }
     public interface StatsTap { void frame(Stats s); }
     public volatile StatsTap stats;
-    public static final int EYE_POINTS = 21, EYE_TRACES = 16;
 
     private void stats(float[] sym, float mse, int syncHits, int[] exact, M17.Stream st, boolean confirmed, boolean packet) {
         StatsTap t = stats; if (t == null) return;
@@ -72,13 +69,6 @@ public final class M17Receiver {
         s.soft = sym.clone(); s.mse = mse; s.syncHits = syncHits; s.confirmed = confirmed; s.packet = packet; s.gain = gain;
         if (exact != null && exact.length == 192) { int m = 0; for (int i = 8; i < 192; i++) if ((int) slice(sym[i]) != exact[i]) m++; s.symErrors = m; }
         if (st != null) { s.metric = st.metric; s.lichErrors = st.lich != null ? st.lichErrors : -1; }
-        s.eye = new float[EYE_TRACES * EYE_POINTS];
-        float k = gain > 0 ? 3f / gain : 0f;
-        for (int tr = 0; tr < EYE_TRACES; tr++) {
-            long c = chosen + (long) (8 + tr * 11) * SPS48;
-            for (int j = 0; j < EYE_POINTS; j++) s.eye[tr * EYE_POINTS + j] = at(c + j - EYE_POINTS / 2) * k;
-        }
-        s.eyeTraces = EYE_TRACES;
         t.frame(s);
     }
     public volatile SymbolTap tap;
