@@ -1,0 +1,85 @@
+SignalDeck
+Copyright (C) 2026 IIMacGyverII
+https://github.com/IIMacGyverII/SignalDeck
+
+"This project is a showcase of what an Android ham radio can do. It is built for innovation, and built on the
+innovation, discovery and hard work of those who came before me. I hope it inspires others to create, and to look
+for the next step."
+
+
+1. License
+----------
+
+SignalDeck -- the app (app/, tiny-stubs/), its web pages, scripts and documentation -- is free software: you can
+redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later version, together with the additional
+terms in section 2 below.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License (the file
+LICENSE) for more details.
+
+Interoperability: SignalDeck talks to the radio module built into supported phones. It contains none of the phone
+maker's software. At run time it uses the phone's own system libraries and services (for example the serial-port
+library and the audio service already installed on the phone); tiny-stubs/ only declares the names of those system
+interfaces so the app can be compiled. Those components remain the property of their owners.
+
+
+2. Additional terms (section 7 of the GNU GPL version 3)
+--------------------------------------------------------
+
+These terms apply to every file of this project that refers to this COPYRIGHT file, and to the work as a whole:
+
+  a) Author attribution (section 7 b). Anyone who conveys this work or a work based on it must keep intact the
+     copyright notice "Copyright (C) 2026 IIMacGyverII", the author credit shown in the app (Device -> Mission
+     Statement), and this COPYRIGHT file.
+
+  b) No misrepresentation (section 7 c). The origin of this work must not be misrepresented. A modified version must
+     be marked in reasonable ways as different from the original (for example in its name, its About screen and its
+     release notes), and must not be presented as the original SignalDeck or as the work of IIMacGyverII.
+
+  c) Names and logos (section 7 e). This license grants no rights under trademark law to use the names "SignalDeck"
+     and "IIMacGyverII", or the SignalDeck icon and artwork, as trademarks. A modified version that is distributed
+     must use its own name and icon. Describing a work truthfully as "based on SignalDeck" is permitted.
+
+Official builds are signed with the project's release key and published only at
+https://github.com/IIMacGyverII/SignalDeck/releases (each release lists the SHA-256 of its APK).
+
+
+3. Third-party components
+-------------------------
+
+SignalDeck includes or uses the following, each under its own license:
+
+  - robot36 by Ahmet Inan (https://github.com/xdsopl/robot36) -- SSTV decoding, ported to Java; GNU GPL v3.
+  - Codec 2 by David Rowe VK5DGR and contributors (https://github.com/drowe67/codec2) -- the voice codec of M17,
+    built from source into the app (app/src/main/cpp/codec2, with its COPYING); GNU Lesser General Public License 2.1.
+  - M17 protocol: the M17 Project specification (https://spec.m17project.org); SignalDeck's M17 receiver is written from
+    the specification.
+  - ft8_lib by Karlis Goba (https://github.com/kgoba/ft8_lib) -- the FT8 encoder, decoder and message packing, ported
+    to Java; MIT License: Copyright (c) 2018 Karlis Goba. Permission is hereby granted, free of charge, to any person
+    obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software
+    without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute,
+    sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+    subject to the following conditions: The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE
+    AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+    SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE. The FT8 protocol and its code tables are by K1JT et al.
+    (WSJT-X).
+  - Vosk speech recognition (https://alphacephei.com/vosk) and its English models, downloaded on first use;
+    Apache License 2.0.
+  - JNA, Java Native Access (https://github.com/java-native-access/jna); Apache License 2.0 (or LGPL 2.1).
+  - AndroidX libraries (appcompat, core, car.app, media); Apache License 2.0.
+  - HiddenApiBypass by LSPosed (https://github.com/LSPosed/AndroidHiddenApiBypass); Apache License 2.0.
+  - Orbitron, Rajdhani and Share Tech Mono fonts; SIL Open Font License 1.1 (see the OFL-*.txt files with the
+    fonts in app/src/main/assets/fonts/).
+  - US amateur radio exam question pools (NCVEC, public domain); machine-readable edition by Russ Olsen,
+    Apache License 2.0.
+
+Data and services used at run time, with thanks:
+  - Map tiles (c) OpenStreetMap contributors, ODbL (https://www.openstreetmap.org/copyright).
+  - Terrain heights: Terrain Tiles on AWS Open Data (Mapzen "terrarium"), built from several public sources.
+  - RadioID.net (DMR IDs and repeaters), BrandMeister (repeaters and talkgroups), hearham.com (repeaters),
+    NetLogger (nets), CelesTrak and AMSAT (satellite orbits), ARISS (ISS station information).

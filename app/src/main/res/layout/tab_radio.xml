@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Radio: tuning step and the FM channel settings (M17 always uses 25 kHz, open squelch and no tones). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+    <TextView style="@style/Head" android:text="Tuning" />
+    <LinearLayout style="@style/Group">
+        <LinearLayout style="@style/Row">
+            <TextView style="@style/Label" android:text="Step" />
+            <Spinner android:id="@+id/step" style="@style/Spin" android:layout_width="0dp" android:layout_weight="1" />
+        </LinearLayout>
+        <TextView style="@style/Note" android:text="Tap the upper or lower half of a digit, drag over it, or long-press the frequency to type it." />
+    </LinearLayout>
+
+    <TextView style="@style/Head" android:text="Frequency correction" />
+    <LinearLayout style="@style/Group">
+        <LinearLayout style="@style/Row">
+            <TextView android:id="@+id/ppmValue" style="@style/KeyText" android:textSize="16sp" android:textStyle="bold" />
+            <Button android:id="@+id/ppmEdit" style="@style/Small" android:text="Edit" />
+        </LinearLayout>
+        <TextView style="@style/Note" android:text="The radio's reference error, measured against a known signal: + when it lands high. The frequency sent to the module is corrected; the display keeps the nominal one." />
+    </LinearLayout>
+
+    <TextView style="@style/Head" android:text="FM" />
+    <LinearLayout style="@style/Group">
+        <LinearLayout style="@style/Row">
+            <TextView style="@style/Label" android:text="Squelch" />
+            <Spinner android:id="@+id/sq" style="@style/Spin" android:layout_width="0dp" android:layout_weight="1" />
+        </LinearLayout>
+        <LinearLayout style="@style/Row">
+            <TextView style="@style/Label" android:text="RX CTCSS" />
+            <Spinner android:id="@+id/rxTone" style="@style/Spin" android:layout_width="0dp" android:layout_weight="1" />
+        </LinearLayout>
+        <LinearLayout style="@style/Row">
+            <TextView style="@style/Label" android:text="TX CTCSS" />
+            <Spinner android:id="@+id/txTone" style="@style/Spin" android:layout_width="0dp" android:layout_weight="1" />
+        </LinearLayout>
+        <CheckBox android:id="@+id/wide" style="@style/Check" android:text="25 kHz channel" />
+    </LinearLayout>
+
+    <TextView style="@style/Head" android:text="Transmitter" />
+    <LinearLayout style="@style/Group">
+        <CheckBox android:id="@+id/high" style="@style/Check" android:text="High power" />
+    </LinearLayout>
+</LinearLayout>

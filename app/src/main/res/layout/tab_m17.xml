@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M17 settings, shown a few groups at a time by SettingsPageActivity. Keys are edited in dialogs, never shown in clear. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+    <LinearLayout android:id="@+id/grpStation" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView style="@style/Head" android:text="Station" />
+        <LinearLayout style="@style/Group">
+            <TextView style="@style/Note" android:text="Your callsign · CAN" />
+            <LinearLayout style="@style/Row">
+                <EditText android:id="@+id/src" style="@style/Field" android:hint="Callsign" android:inputType="textCapCharacters|textNoSuggestions|textVisiblePassword" />
+                <EditText android:id="@+id/can" style="@style/Field" android:layout_width="72dp" android:layout_weight="0" android:hint="CAN" android:inputType="number" />
+            </LinearLayout>
+            <TextView style="@style/Note" android:text="Destination" />
+            <LinearLayout style="@style/Row">
+                <EditText android:id="@+id/dst" style="@style/Field" android:hint="@ALL" android:inputType="textCapCharacters|textNoSuggestions|textVisiblePassword" />
+            </LinearLayout>
+            <Spinner android:id="@+id/leadIn" style="@style/Spin" />
+            <TextView style="@style/Note" android:text="Extra preamble sent while the transmitter ramps up, ahead of the standard 40 ms preamble." />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/grpMeta" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView style="@style/Head" android:text="META" />
+        <LinearLayout style="@style/Group">
+            <Spinner android:id="@+id/metaKind" style="@style/Spin" />
+            <LinearLayout android:id="@+id/metaTextRow" style="@style/Row">
+                <TextView android:id="@+id/metaText" style="@style/KeyText" android:fontFamily="sans-serif" android:textSize="15sp" />
+                <Button android:id="@+id/metaTextEdit" style="@style/Small" android:text="Edit" />
+            </LinearLayout>
+            <TextView android:id="@+id/gnssInfo" style="@style/Note" />
+            <LinearLayout android:id="@+id/ecdRow" style="@style/Row">
+                <EditText android:id="@+id/ecd1" style="@style/Field" android:hint="Originator" android:inputType="textCapCharacters|textNoSuggestions|textVisiblePassword" />
+                <EditText android:id="@+id/ecd2" style="@style/Field" android:hint="Reflector" android:inputType="textCapCharacters|textNoSuggestions|textVisiblePassword" />
+            </LinearLayout>
+            <Spinner android:id="@+id/station" style="@style/Spin" />
+            <TextView style="@style/Note" android:text="With encryption on, META carries the nonce or the scrambler state instead." />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/grpEnc" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView style="@style/Head" android:text="Transmit encryption" />
+        <LinearLayout style="@style/Group">
+            <Spinner android:id="@+id/enc" style="@style/Spin" />
+            <LinearLayout android:id="@+id/aesRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <Spinner android:id="@+id/aesBits" style="@style/Spin" />
+                <TextView android:id="@+id/aesKey" style="@style/KeyText" android:layout_width="match_parent" android:paddingTop="4dp" android:paddingBottom="4dp" />
+                <LinearLayout style="@style/Row">
+                    <Button android:id="@+id/aesEdit" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Edit" />
+                    <Button android:id="@+id/aesNew" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="New" />
+                    <Button android:id="@+id/aesClear" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Clear" />
+                </LinearLayout>
+            </LinearLayout>
+            <LinearLayout android:id="@+id/scrRow" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <Spinner android:id="@+id/scrBits" style="@style/Spin" />
+                <TextView android:id="@+id/scrSeed" style="@style/KeyText" android:layout_width="match_parent" android:paddingTop="4dp" android:paddingBottom="4dp" />
+                <LinearLayout style="@style/Row">
+                    <Button android:id="@+id/scrEdit" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Edit" />
+                    <Button android:id="@+id/scrClear" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Clear" />
+                </LinearLayout>
+            </LinearLayout>
+            <TextView style="@style/Note" android:text="Amateur rules in most countries forbid encrypted transmissions." />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/grpSign" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView style="@style/Head" android:text="Signature" />
+        <LinearLayout style="@style/Group">
+            <CheckBox android:id="@+id/sign" style="@style/Check" android:text="Sign my transmissions (ECDSA P-256)" />
+            <TextView android:id="@+id/pubKey" style="@style/Note" android:fontFamily="monospace" android:textIsSelectable="true" />
+            <LinearLayout style="@style/Row">
+                <Button android:id="@+id/keyGen" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Generate" />
+                <Button android:id="@+id/keyImport" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Import" />
+            </LinearLayout>
+            <LinearLayout style="@style/Row">
+                <Button android:id="@+id/keyCopy" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Copy public" />
+                <Button android:id="@+id/keyClear" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Clear" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/grpRxKeys" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView style="@style/Head" android:text="AES key for receiving" />
+        <LinearLayout style="@style/Group">
+            <TextView android:id="@+id/rxAes" style="@style/KeyText" android:layout_width="match_parent" android:paddingBottom="4dp" />
+            <LinearLayout style="@style/Row">
+                <Button android:id="@+id/rxAesEdit" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Edit" />
+                <Button android:id="@+id/rxAesClear" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Clear" />
+            </LinearLayout>
+        </LinearLayout>
+        <TextView style="@style/Head" android:text="Scrambler seed for receiving" />
+        <LinearLayout style="@style/Group">
+            <Spinner android:id="@+id/rxScrBits" style="@style/Spin" />
+            <TextView android:id="@+id/rxScr" style="@style/KeyText" android:layout_width="match_parent" android:paddingBottom="4dp" />
+            <LinearLayout style="@style/Row">
+                <Button android:id="@+id/rxScrEdit" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Edit" />
+                <Button android:id="@+id/rxScrClear" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Clear" />
+            </LinearLayout>
+        </LinearLayout>
+        <TextView style="@style/Head" android:text="Known public keys" />
+        <LinearLayout style="@style/Group">
+            <TextView android:id="@+id/pubKeys" style="@style/KeyText" android:layout_width="match_parent" android:paddingBottom="4dp" />
+            <Button android:id="@+id/pubKeysEdit" style="@style/Big" android:text="Edit the list" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/grpRx" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView style="@style/Head" android:text="Voice" />
+        <LinearLayout style="@style/Group">
+            <CheckBox android:id="@+id/neural" style="@style/Check" android:text="Use neural decoder" />
+            <TextView style="@style/Note" android:text="Codec2-mod-neural: the same Codec2 3200 frames synthesised by FARGAN, 16 kHz audio. Voice+data (1600) streams are not played either way." />
+            <CheckBox android:id="@+id/agc" style="@style/Check" android:text="AGC (DroidStar)" />
+            <TextView style="@style/Note" android:text="Evens out loud and quiet stations: the peak over the last half second sets the gain (up to ×50), which drops at once and rises slowly." />
+        </LinearLayout>
+        <TextView style="@style/Head" android:text="Demodulator" />
+        <LinearLayout style="@style/Group">
+            <CheckBox android:id="@+id/invert" style="@style/Check" android:text="Invert receive polarity" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

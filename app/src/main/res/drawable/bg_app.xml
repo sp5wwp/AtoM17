@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Steel-blue ground with one lighter diagonal facet. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape><gradient android:angle="315" android:startColor="#132B41" android:centerColor="#1D4462" android:endColor="#2A5F83" /></shape></item>
+    <item android:top="380dp" android:bottom="-400dp" android:left="-300dp" android:right="-300dp">
+        <rotate android:fromDegrees="-24" android:pivotX="50%" android:pivotY="50%">
+            <shape><solid android:color="#0CFFFFFF" /></shape>
+        </rotate>
+    </item>
+</layer-list>

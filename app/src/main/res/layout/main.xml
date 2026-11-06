@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AtoM17 main screen. The frequency block's top edge is placed at 25 % of the screen height in code (topSpace);
+     the FM / M17 switch sits directly above it. Options live in SettingsActivity (gear). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:paddingLeft="10dp" android:paddingRight="10dp" android:paddingTop="4dp">
+
+    <LinearLayout android:id="@+id/header" android:layout_width="match_parent" android:layout_height="48dp"
+        android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/logo" android:contentDescription="M17" />
+        <TextView android:id="@+id/status" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:paddingLeft="8dp" android:textColor="#D3E0EB" android:textSize="11.5sp" android:maxLines="2" android:text="Radio off" />
+        <Button android:id="@+id/power" android:layout_width="wrap_content" android:layout_height="34dp" android:minWidth="64dp" android:minHeight="0dp"
+            android:background="@drawable/pill" android:textColor="#FFFFFF" android:textStyle="bold" android:textAllCaps="false" android:textSize="13sp"
+            android:paddingLeft="14dp" android:paddingRight="14dp" android:text="Start" />
+        <ImageButton android:id="@+id/gear" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_gear"
+            android:background="@drawable/row_bg" android:contentDescription="Settings" />
+    </LinearLayout>
+
+    <View android:id="@+id/topSpace" android:layout_width="match_parent" android:layout_height="0dp" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingBottom="8dp">
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal"
+            android:background="@drawable/seg_bg" android:padding="3dp">
+            <TextView android:id="@+id/modeFm" android:layout_width="wrap_content" android:layout_height="36dp" android:minWidth="68dp"
+                android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="FM" />
+            <TextView android:id="@+id/modeM17" android:layout_width="wrap_content" android:layout_height="36dp" android:minWidth="68dp"
+                android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="M17" />
+        </LinearLayout>
+        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
+        <TextView android:id="@+id/stepChip" android:layout_width="wrap_content" android:layout_height="32dp" android:gravity="center"
+            android:background="@drawable/pill" android:paddingLeft="12dp" android:paddingRight="12dp" android:textColor="#E4EDF5"
+            android:textSize="12sp" android:textStyle="bold" android:text="12.5 kHz step" />
+    </LinearLayout>
+
+    <FrameLayout android:id="@+id/freqHolder" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:background="@drawable/card" android:paddingLeft="4dp" android:paddingRight="4dp" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:orientation="horizontal"
+        android:gravity="center_vertical" android:paddingLeft="4dp">
+        <View android:id="@+id/sigBar" android:layout_width="3dp" android:layout_height="14dp" />
+        <TextView android:id="@+id/sigText" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+            android:paddingLeft="8dp" android:textColor="#D3E0EB" android:textSize="12sp" android:singleLine="true" android:ellipsize="end" />
+    </LinearLayout>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
+        android:background="@drawable/seg_bg" android:padding="3dp">
+        <TextView android:id="@+id/tabLive" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp"
+            android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="Live" />
+        <TextView android:id="@+id/tabHeard" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp"
+            android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="Heard" />
+        <LinearLayout android:id="@+id/tabInbox" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp"
+            android:orientation="horizontal" android:gravity="center">
+            <TextView android:id="@+id/tabInboxText" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textStyle="bold" android:textSize="14sp" android:text="Inbox" />
+            <TextView android:id="@+id/inboxBadge" android:layout_width="wrap_content" android:layout_height="18dp" android:minWidth="18dp"
+                android:layout_marginLeft="6dp" android:background="@drawable/badge" android:gravity="center" android:paddingLeft="5dp" android:paddingRight="5dp"
+                android:textColor="#1B1206" android:textSize="11sp" android:textStyle="bold" android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:paddingTop="8dp">
+        <ScrollView android:id="@+id/panelLive" android:layout_width="match_parent" android:layout_height="match_parent">
+            <LinearLayout android:id="@+id/liveBox" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+        </ScrollView>
+        <ScrollView android:id="@+id/panelHeard" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
+            <LinearLayout android:id="@+id/heardList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+                android:background="@drawable/card" />
+        </ScrollView>
+        <LinearLayout android:id="@+id/panelInbox" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:visibility="gone">
+            <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+                <LinearLayout android:id="@+id/inboxList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
+            </ScrollView>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="6dp">
+                <Button android:id="@+id/smsNew" android:layout_width="0dp" android:layout_weight="1" android:layout_height="44dp" android:minHeight="0dp" android:background="@drawable/btn_primary"
+                    android:textColor="#1B1206" android:textStyle="bold" android:textAllCaps="false" android:text="New SMS" />
+                <Button android:id="@+id/smsClear" android:layout_width="wrap_content" android:layout_height="44dp" android:minWidth="88dp" android:minHeight="0dp"
+                    android:layout_marginLeft="8dp" android:background="@drawable/btn" android:textColor="#FFFFFF" android:textStyle="bold"
+                    android:textAllCaps="false" android:text="Clear" />
+            </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
+
+    <TextView android:id="@+id/txBar" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp"
+        android:layout_marginBottom="10dp" android:gravity="center" android:textStyle="bold" android:textSize="15sp"
+        android:background="@drawable/card" android:textColor="#E4EDF5" android:text="Radio off" />
+</LinearLayout>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Device: the PTT key, bench tools, about; shown a group at a time by SettingsPageActivity. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+
+    <LinearLayout android:id="@+id/grpPtt" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView style="@style/Head" android:text="Hardware key" />
+        <LinearLayout style="@style/Group">
+            <TextView android:id="@+id/pttInfo" style="@style/Note" android:textSize="14sp" android:textColor="#FFFFFF" />
+            <LinearLayout style="@style/Row">
+                <Button android:id="@+id/pttLearn" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Learn PTT key" />
+                <Button android:id="@+id/pttForget" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Forget" />
+            </LinearLayout>
+            <TextView style="@style/Note" android:text="The system still acts on the key too (e.g. the flashlight): reassign it under Settings › Intelligent assistance." />
+        </LinearLayout>
+        <TextView style="@style/Head" android:text="On screen" />
+        <LinearLayout style="@style/Group">
+            <CheckBox android:id="@+id/softPtt" style="@style/Check" android:text="On-screen PTT (tap the bottom bar to start and stop)" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/grpBench" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView style="@style/Head" android:text="Transmit test" />
+        <LinearLayout style="@style/Group">
+            <Button android:id="@+id/testTx" style="@style/Big" android:text="M17 test: 10 s of a 1 kHz tone" />
+            <TextView style="@style/Note" android:text="Keys the transmitter without the microphone or the PTT key: use a dummy load or a frequency you may use." />
+        </LinearLayout>
+        <TextView style="@style/Head" android:text="Receive recording" />
+        <LinearLayout style="@style/Group">
+            <Button android:id="@+id/record" style="@style/Big" android:text="Record M17 receive audio (30 s)" />
+            <TextView style="@style/Note" android:text="Saves what the M17 decoder hears (8 kHz WAV) to Download/AtoM17, for checking a station that does not decode." />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/grpAbout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <TextView style="@style/Head" android:text="AtoM17" />
+        <LinearLayout style="@style/Group">
+            <TextView android:id="@+id/about" style="@style/Note" android:textSize="13sp" android:textIsSelectable="true" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

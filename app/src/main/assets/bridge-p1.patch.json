@@ -1,0 +1,47 @@
+{
+ "name": "product bridge P1 (PTT holds the module's loader strap at power-up; lossless update mode; no bench capture tap, no 0x31)",
+ "version": "20261102000002",
+ "baseSha256": "7606305434c269f9ca7446e099714540b6dda3e37390396a6e3d07efdbd60abb",
+ "baseSize": 55011,
+ "size": 55562,
+ "sha256": "4b744510e26564fe2138289e311485ac430e4de47b21e33e34c3919241642854",
+ "source": "phonedmrapp radio_firmware/atomxl/p1-patch.txt (Atom XL firmware team, reviewed 2026-11-02 22:14)",
+ "edits": [
+  {
+   "at": 24562,
+   "bytes": "07"
+  },
+  {
+   "at": 24564,
+   "bytes": "05fc"
+  },
+  {
+   "at": 24602,
+   "bytes": "07"
+  },
+  {
+   "at": 24604,
+   "bytes": "45fc"
+  },
+  {
+   "at": 25442,
+   "bytes": "10"
+  },
+  {
+   "at": 25570,
+   "bytes": "10"
+  },
+  {
+   "at": 26420,
+   "bytes": "07f0d1b8"
+  },
+  {
+   "at": 41946,
+   "bytes": "00bf00bf00bf"
+  },
+  {
+   "at": 55011,
+   "bytes": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff70b543f63000c4f202000168032211430160016886b0802000900120019000200290002003900020049000a940f20000c4f20200f8f704f806b040f20004c4f2020420690121084208d00122802140f20000c4f20200f8f7e2f807e00022802140f20000c4f20200f8f7d9f8f8f74cfd20690121084208d00122802140f20000c4f20200f8f7cbf807e00022802140f20000c4f20200f8f7c2f84ef2f070c2f201000021016070bd38b541f6cc40c2f200004df6ca01c0f600010f220b78037001300131013af9d138bd3230323631313032303030303032000041f62c50c2f200000068012840f00c8041f64050c2f200000068d0f81402002800f00280f9f701b8012101a8f8f717bf"
+  }
+ ]
+}
