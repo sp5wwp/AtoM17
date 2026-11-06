@@ -9,7 +9,6 @@ SignalDeck.
 
 ## Main screen
 
-Disregard the red overlay text, it is not rendered by the app.
 ![Main screen](pics/main.png)
 
 ## What it does
