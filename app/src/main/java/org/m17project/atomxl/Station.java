@@ -200,12 +200,15 @@ final class Station implements Radio.Events, Audio.Sink {
     /** Re-write the channel from the settings (on the radio thread). */
     void applyChannel() { worker.execute(() -> { try { applyChannelNow(); } catch (Throwable t) { log("channel: " + t); } state(); }); }
 
+    /** Set while an SMS is on the air from FM mode: the module gets the M17 channel (wide, no tones) for it. */
+    private volatile boolean forceM17;
+
     private void applyChannelNow() throws IOException {
         if (!open) return;
         int hz = cfg.freq();
         // the radio's reference error: positive ppm = it lands high, so ask for a little less
         int cmd = (int) Math.round(hz / (1 + cfg.ppm() * 1e-6));
-        boolean m17 = cfg.m17();
+        boolean m17 = cfg.m17() || forceM17;
         // M17: wide FM, squelch open and no tones, so the demodulator gets the audio continuously (SignalDeck does the same)
         boolean ok = radio.setAnalog(cmd, cmd, m17 || cfg.wide(), cfg.high(), m17 ? 0 : cfg.squelch(), m17 ? 0 : cfg.rxTone(), m17 ? 0 : cfg.txTone(), cfg.volume());
         log("channel " + Config.mhz(hz) + " MHz " + (m17 ? "M17" : "FM") + (cmd != hz ? String.format(java.util.Locale.US, " (%.1f ppm: %d Hz sent)", cfg.ppm(), cmd) : "") + (ok ? "" : " (refused)"));
@@ -549,7 +552,16 @@ final class Station implements Radio.Events, Audio.Sink {
     /** Configure the encoder from the settings; null when it is ready, else why not. */
     String configureTx() { return configureTx(cfg.dst()); }
 
-    String configureTx(String dst) {
+    String configureTx(String dst) { return configureTx(dst, false); }
+
+    /**
+     * {@code packet}: for an SMS. Packet mode carries only the CAN in TYPE and an empty META (m17tx_packet), so the
+     * encryption, signing and META settings must not stop it (2026-11-08: AES selected without a key blocked SMS).
+     */
+    String configureTx(String dst, boolean packet) {
+        if (packet)
+            return M17Native.txConfigure(txh, cfg.src().trim(), dst.trim(), cfg.can(), M17Native.META_TEXT, "", 0, 0, 0, 0, 0, cfg.station(), 0,
+                    "", "", M17Native.ENC_NONE, 128, null, 8, 0, false, null) == 0 ? null : "the encoder refused the callsigns or CAN";
         double lat = 0, lon = 0; float alt = 0, spd = 0; int brg = 0, validity = 0;
         if (cfg.metaKind() == M17Native.META_GNSS) {
             android.location.Location loc = lastLocation();
@@ -816,14 +828,17 @@ final class Station implements Radio.Events, Audio.Sink {
         if (cfg.src().trim().isEmpty()) return "set your callsign first";
         byte[] t = text.getBytes(StandardCharsets.UTF_8);
         if (t.length > 821) return "at most 821 bytes";
+        String to0 = dst == null || dst.isEmpty() ? cfg.dst() : dst;
+        String bad = configureTx(to0, true);
+        if (bad != null) return bad;
         txSince = System.currentTimeMillis(); txKind = "M17 SMS"; txLevelDb = -90;
         transmitting = true; state();
+        boolean fm = !cfg.m17();
         Thread th = new Thread(() -> {
             SymStream s = new SymStream();
             try {
                 if (audio.capturing()) { audio.stopCapture(); Thread.sleep(150); }
-                String why = configureTx(dst == null || dst.isEmpty() ? cfg.dst() : dst);
-                if (why != null) { log("SMS: " + why); return; }
+                if (fm) { forceM17 = true; applyChannelNow(); log("SMS: M17 channel for the send (FM mode)"); }
                 if (!symReset()) { log("SMS: the symbol engine did not answer the reset"); return; }
                 byte[] b = new byte[(3 + 33) * 48];
                 int n = M17Native.txSms(txh, t, b);
@@ -832,7 +847,11 @@ final class Station implements Radio.Events, Audio.Sink {
                 s.add(b, n);
                 if (s.flush(true)) { String to = dst == null || dst.isEmpty() ? cfg.dst() : dst; log("SMS sent to " + to + ": " + text); inbox.add(false, cfg.src(), to, text); }
             } catch (Throwable e) { log("SMS: " + e); }
-            finally { m17Finish(null, s.keyed, s.endFill); }
+            finally {
+                forceM17 = false;                        // m17Finish writes the channel again: back to FM
+                m17Finish(null, s.keyed, s.endFill);
+                if (fm && !s.keyed) applyChannel();
+            }
         }, "sms");
         th.start();
         return null;
