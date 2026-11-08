@@ -28,6 +28,23 @@ public final class FirmwareActivity extends Activity {
     private Button load, restore, trimBtn;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private volatile boolean running;
+    private ScrollView logScroll;
+    private TextView elapsed;
+    private long startedAt;
+    private int step = -1;
+    private String phaseName = "";
+    /** The load's steps, in order; the loader's own phases (loader, erasing, finish, restart) are inside "transfer". */
+    private static final String[] STEPS = { "preparing", "bridge backup", "loader bridge", "hardware check", "transfer", "stock bridge" };
+    private static final String[] STEP_TEXT = { "Checking the images", "Backing up the bridge", "Writing the loader bridge", "Checking the hardware",
+            "Loading the module", "Writing the stock bridge back" };
+    private final Runnable tick = new Runnable() {
+        @Override public void run() {
+            if (!running) return;
+            long s = (System.currentTimeMillis() - startedAt) / 1000;
+            elapsed.setText(String.format(java.util.Locale.US, "%d:%02d elapsed · about 5 minutes in all · do not touch the radio", s / 60, s % 60));
+            ui.postDelayed(this, 1000);
+        }
+    };
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
@@ -54,14 +71,18 @@ public final class FirmwareActivity extends Activity {
         labelLoad();
         trimBtn.setOnClickListener(v -> trimDialog());
 
-        phase = new TextView(this); phase.setTextColor(Ui.ORANGE);
+        phase = new TextView(this); phase.setTextColor(Ui.ORANGE); phase.setTextSize(15); phase.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        phase.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 2));
         root.addView(phase);
         bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         bar.setMax(1000);
-        root.addView(bar);
+        bar.setProgressTintList(android.content.res.ColorStateList.valueOf(Ui.ORANGE));
+        root.addView(bar, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 14)));
+        elapsed = new TextView(this); elapsed.setTextColor(Ui.TEXT3); elapsed.setTextSize(12);
+        root.addView(elapsed);
 
         log = new TextView(this); log.setTextColor(Ui.WHITE); log.setTextSize(11); log.setTypeface(android.graphics.Typeface.MONOSPACE); log.setTextIsSelectable(true);
-        ScrollView sv = new ScrollView(this); sv.addView(log);
+        ScrollView sv = new ScrollView(this); sv.addView(log); logScroll = sv;
         root.addView(sv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
         setContentView(root);
 
@@ -153,15 +174,30 @@ public final class FirmwareActivity extends Activity {
         running = true;
         load.setEnabled(false); restore.setEnabled(false);
         log.setText("");
+        // while it runs: the steps, the bar and the log get the screen (the long text and the buttons would push them off it)
+        info.setVisibility(View.GONE);
+        for (Button x : new Button[] { load, trimBtn, restore }) x.setVisibility(View.GONE);
+        step = -1; phaseName = ""; startedAt = System.currentTimeMillis(); phase.setTextColor(Ui.ORANGE);
+        bar.setProgress(0);
+        showStep(0, 0);
+        ui.post(tick);
+        // the screen stays on (FLAG_KEEP_SCREEN_ON, set for this page), and while the load runs this page shows over the
+        // lock screen and lights the screen if the power key turned it off, so the progress is never behind the PIN
+        setShowWhenLocked(true); setTurnScreenOn(true);
         st.flash(isRestore, new Flasher.Ui() {
             @Override public void phase(String p) {
                 ui.post(() -> {
-                    phase.setText(p);
-                    if ("done".equals(p)) { running = false; load.setEnabled(true); restore.setEnabled(true); }
+                    if ("done".equals(p)) { finished(); return; }
+                    int i = java.util.Arrays.asList(STEPS).indexOf(p);
+                    if (i < 0 && step >= 0 && java.util.Arrays.asList("loader", "erasing", "finish", "restart").contains(p)) i = 4;
+                    phaseName = i == 4 && !"transfer".equals(p) ? p : "";
+                    showStep(i < 0 ? Math.max(step, 0) : i, i == 4 && ("finish".equals(p) || "restart".equals(p)) ? 1 : 0);
                 });
             }
-            @Override public void log(String s) { ui.post(() -> log.append(s + "\n")); }
-            @Override public void progress(int d, int t) { ui.post(() -> { bar.setProgress(t == 0 ? 0 : d * 1000 / t); phase.setText("transfer " + d + " / " + t); }); }
+            @Override public void log(String s) { ui.post(() -> { log.append(s + "\n"); logScroll.post(() -> logScroll.fullScroll(View.FOCUS_DOWN)); }); }
+            @Override public void progress(int d, int t) {
+                ui.post(() -> { phaseName = "block " + d + " of " + t + String.format(java.util.Locale.US, " (%d %%)", t == 0 ? 0 : d * 100 / t); showStep(4, t == 0 ? 0 : (float) d / t); });
+            }
             @Override public boolean confirmReplace(String tag) {
                 CountDownLatch done = new CountDownLatch(1);
                 AtomicBoolean yes = new AtomicBoolean();
@@ -175,6 +211,31 @@ public final class FirmwareActivity extends Activity {
                 return yes.get();
             }
         });
+    }
+
+    /** "Step 5 of 6: Loading the module · block 512 of 1024 (50 %)" and the bar over all the steps. */
+    private void showStep(int i, float frac) {
+        step = i;
+        phase.setText("Step " + (i + 1) + " of " + STEPS.length + ": " + STEP_TEXT[i] + (phaseName.isEmpty() ? "" : " · " + phaseName));
+        bar.setProgress(Math.round((i + Math.max(0f, Math.min(1f, frac))) * 1000f / STEPS.length));
+    }
+
+    private void finished() {
+        running = false;
+        ui.removeCallbacks(tick);
+        setShowWhenLocked(false); setTurnScreenOn(false);
+        long s = (System.currentTimeMillis() - startedAt) / 1000;
+        CharSequence last = log.getText();
+        String res = last.toString().trim();
+        res = res.substring(res.lastIndexOf('\n') + 1);
+        boolean ok = res.startsWith("LOADED") || res.startsWith("RESTORED V076") && !res.contains("after");
+        phase.setText((ok ? "Done: " : "Stopped: ") + res);
+        phase.setTextColor(ok ? Ui.OK : Ui.BAD);
+        if (ok) bar.setProgress(1000);
+        elapsed.setText(String.format(java.util.Locale.US, "took %d:%02d", s / 60, s % 60));
+        info.setVisibility(View.VISIBLE);
+        for (Button x : new Button[] { load, trimBtn, restore }) x.setVisibility(View.VISIBLE);
+        load.setEnabled(true); restore.setEnabled(true);
     }
 
     @Override public void onBackPressed() {

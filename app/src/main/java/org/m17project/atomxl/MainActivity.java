@@ -242,6 +242,14 @@ public final class MainActivity extends Activity implements Station.Listener {
     /** Store the current channel as a new memory, asking for its name. */
     private void storeMemory(Runnable then) {
         Memories.Ch c = Memories.Ch.current(cfg);
+        long tx = (long) c.hz + (long) c.shift * c.offset;
+        if (!Config.tunable(c.hz) || !Config.tunable(tx)) {
+            new AlertDialog.Builder(this).setTitle("Can't store this channel")
+                    .setMessage("With the " + Config.shiftText(c.shift, c.offset) + " MHz repeater shift it would transmit on " + Config.mhz((int) tx)
+                            + " MHz, outside the radio's " + Config.rangeText() + " range. Change the shift or offset in Settings › Tuning, FM and power.")
+                    .setPositiveButton("OK", null).show();
+            return;
+        }
         EditText e = new EditText(this);
         e.setText(c.name); e.setSelectAllOnFocus(true);
         new AlertDialog.Builder(this).setTitle("Store " + Config.mhz(c.hz) + " MHz").setMessage(c.summary()).setView(e)

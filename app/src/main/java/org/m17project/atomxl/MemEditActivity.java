@@ -236,7 +236,7 @@ public final class MemEditActivity extends Activity {
             return;
         }
         int tx = (int) Math.round((rx + ch.shift * off) * 1e6);
-        boolean in = Config.inBand(tx, st.cfg.region());
+        boolean in = Config.tunable(tx) && Config.inBand(tx, st.cfg.region());
         txNote.setText(Config.txCaption(tx, st.cfg.region()));
         txNote.setTextColor(in ? Ui.TEXT3 : Ui.BAD);
         txNote.setVisibility(View.VISIBLE);
@@ -285,7 +285,7 @@ public final class MemEditActivity extends Activity {
         int hz;
         try { hz = (int) Math.round(Double.parseDouble(mhz.getText().toString().trim().replace(',', '.')) * 1e6); }
         catch (NumberFormatException e) { mhz.setError("MHz, e.g. 438.825"); return false; }
-        if (hz < 400_000_000 || hz > 480_000_000) { mhz.setError("400–480 MHz"); return false; }
+        if (!Config.tunable(hz)) { mhz.setError(Config.rangeText()); mhz.requestFocus(); return false; }
         int cn;
         try { cn = Integer.parseInt(can.getText().toString().trim()); } catch (NumberFormatException e) { cn = -1; }
         if (ch.m17 && (cn < 0 || cn > 15)) { can.setError("0–15"); return false; }
@@ -295,7 +295,11 @@ public final class MemEditActivity extends Activity {
             catch (NumberFormatException e) { offset.setError("MHz, e.g. 7.6"); return false; }
             if (off <= 0 || off > 40_000_000) { offset.setError("0–40 MHz"); return false; }
             int tx = hz + ch.shift * off;
-            if (tx < 400_000_000 || tx > 480_000_000) { offset.setError("TX " + Config.mhz(tx) + " MHz is outside 400–480"); return false; }
+            if (!Config.tunable(tx)) {
+                offset.setError("TX " + Config.mhz(tx) + " MHz is outside the radio's " + Config.rangeText() + " range");
+                offset.requestFocus();
+                return false;
+            }
         }
         ch.offset = off;
         ch.hz = hz;

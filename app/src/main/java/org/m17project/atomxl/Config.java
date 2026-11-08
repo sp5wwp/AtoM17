@@ -91,10 +91,14 @@ final class Config {
         b.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), a, b.length(), 0);
         b.setSpan(new android.text.style.TypefaceSpan("monospace"), a, b.length(), 0);
         b.append(" MHz");
-        if (!in) b.append(" · outside " + bandLo(region) / 1_000_000 + "–" + bandHi(region) / 1_000_000 + " MHz (IARU Region " + region + ")");
+        if (!tunable(txHz)) b.append(" · outside the radio's " + rangeText() + " range, can't be stored");
+        else if (!in) b.append(" · outside " + bandLo(region) / 1_000_000 + "–" + bandHi(region) / 1_000_000 + " MHz (IARU Region " + region + ")");
         else b.setSpan(new android.text.style.ForegroundColorSpan(Ui.WHITE), a, a + 11, 0);
         return b;
     }
+    /** Within the module's tuning range (400–480 MHz). */
+    static boolean tunable(long hz) { return hz >= MIN_HZ && hz <= MAX_HZ; }
+    static String rangeText() { return MIN_HZ / 1_000_000 + "–" + MAX_HZ / 1_000_000 + " MHz"; }
     static boolean inBand(int txHz, int region) { return txHz >= bandLo(region) && txHz <= bandHi(region); }
 
     SharedPreferences.Editor edit() { return p.edit(); }
