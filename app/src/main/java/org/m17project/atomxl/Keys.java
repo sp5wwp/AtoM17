@@ -74,6 +74,19 @@ final class Keys {
         return b.toString();
     }
 
+    /**
+     * Bring the active encryption settings (enc, keys) in line with the channel in use: VFO's key in VFO, the memory's
+     * in MEM. Before named keys, "AES" could be selected with no key; migration left that "enc" behind with VFO set to
+     * no key, so META was hidden as "carrying the nonce" while nothing was encrypted (2026-11-08).
+     */
+    void sync() {
+        boolean mem = cfg.p.getBoolean("memMode", false);
+        String id = mem ? (cfg.m17() ? cfg.p.getString("keyId", "") : "") : cfg.p.getString("vfoKeyId", "");
+        Key k = byId(id);
+        int want = k == null || !k.valid() ? M17Native.ENC_NONE : k.aes ? M17Native.ENC_AES : M17Native.ENC_SCRAM;
+        if (cfg.enc() != want || !cfg.p.getString("keyId", "").equals(k == null ? "" : k.id)) activate(id);
+    }
+
     /** Make key {@code id} (or none) the active one for transmit and receive. The caller reconfigures the receiver. */
     void activate(String id) {
         Key k = byId(id);

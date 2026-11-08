@@ -320,6 +320,13 @@ final class M17Tab {
         showGnss();
         a.findViewById(R.id.ecdRow).setVisibility(clear && mk == M17Native.META_ECD ? View.VISIBLE : View.GONE);
         a.findViewById(R.id.station).setVisibility(clear && mk == M17Native.META_GNSS ? View.VISIBLE : View.GONE);
+        TextView note = a.findViewById(R.id.metaEncNote);
+        if (note != null) {
+            Keys.Key k = new Keys(cfg).byId(cfg.p.getString("keyId", ""));
+            note.setVisibility(clear ? View.GONE : View.VISIBLE);
+            note.setText("Encryption is on" + (k != null ? " (" + k.name + ")" : "") + ", so META carries the "
+                    + (enc == M17Native.ENC_AES ? "AES nonce" : "scrambler state") + " instead. Choose \u201cNo encryption\u201d in Encryption and signing to send text or position.");
+        }
         a.findViewById(R.id.aesRow).setVisibility(enc == M17Native.ENC_AES ? View.VISIBLE : View.GONE);
         a.findViewById(R.id.scrRow).setVisibility(enc == M17Native.ENC_SCRAM ? View.VISIBLE : View.GONE);
     }

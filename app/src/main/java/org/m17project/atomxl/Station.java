@@ -88,6 +88,7 @@ final class Station implements Radio.Events, Audio.Sink {
         inbox = new Inbox(c);
         radio = new Radio(c.getFilesDir(), this);
         pttKey = new PttKey(cfg);
+        new Keys(cfg).sync();                            // a stale "enc" from before named keys must not hide META
         radio.setGuard(new Radio.Guard() {
             @Override public void before() { quietForReply(); }
             @Override public void after() { ui.postDelayed(() -> worker.execute(Station.this::evalCapture), REPLY_QUIET_MS + 100); }
