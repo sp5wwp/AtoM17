@@ -64,9 +64,9 @@
     </LinearLayout>
 
     <LinearLayout android:id="@+id/grpSign" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-        <TextView style="@style/Head" android:text="Signature" />
+        <TextView style="@style/Head" android:text="Station signing key" />
         <LinearLayout style="@style/Group">
-            <CheckBox android:id="@+id/sign" style="@style/Check" android:text="Sign my transmissions (ECDSA P-256)" />
+            <CheckBox android:id="@+id/sign" style="@style/Check" android:visibility="gone" android:text="Sign my transmissions (ECDSA P-256)" />
             <TextView android:id="@+id/pubKey" style="@style/Note" android:fontFamily="monospace" android:textIsSelectable="true" />
             <LinearLayout style="@style/Row">
                 <Button android:id="@+id/keyGen" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Generate" />
@@ -80,6 +80,8 @@
     </LinearLayout>
 
     <LinearLayout android:id="@+id/grpRxKeys" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <!-- before named keys: separate receive keys. The channel's key now receives too; kept for the binder, never shown -->
+        <LinearLayout android:id="@+id/grpRxOld" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
         <TextView style="@style/Head" android:text="AES key for receiving" />
         <LinearLayout style="@style/Group">
             <TextView android:id="@+id/rxAes" style="@style/KeyText" android:layout_width="match_parent" android:paddingBottom="4dp" />
@@ -97,10 +99,12 @@
                 <Button android:id="@+id/rxScrClear" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Clear" />
             </LinearLayout>
         </LinearLayout>
+        </LinearLayout>
         <TextView style="@style/Head" android:text="Known public keys" />
         <LinearLayout style="@style/Group">
             <TextView android:id="@+id/pubKeys" style="@style/KeyText" android:layout_width="match_parent" android:paddingBottom="4dp" />
             <Button android:id="@+id/pubKeysEdit" style="@style/Big" android:text="Edit the list" />
+            <TextView style="@style/Note" android:text="Signed streams are checked on every channel against these public keys." />
         </LinearLayout>
     </LinearLayout>
 

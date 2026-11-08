@@ -17,6 +17,8 @@ final class M17Native {
     static native int rxSetNeural(long h, boolean on);
     /** Sample rate of what rxReadAudio returns: 8000, or 16000 with the neural decoder. */
     static native int rxAudioRate(long h);
+    /** Voice check: 8 kHz speech through Codec2 3200 and back (FARGAN at 16 kHz with {@code neural}). */
+    static native short[] c2Loopback(short[] pcm8k, boolean neural);
     static native int rxProcessPcm(long h, short[] pcm, int frames, int channels, int ch);
     static native int rxPushSymbols(long h, float[] sym192);
     static native int rxReadAudio(long h, short[] out);

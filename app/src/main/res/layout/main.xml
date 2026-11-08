@@ -13,8 +13,9 @@
         <Button android:id="@+id/power" android:layout_width="wrap_content" android:layout_height="34dp" android:minWidth="64dp" android:minHeight="0dp"
             android:background="@drawable/pill" android:textColor="#FFFFFF" android:textStyle="bold" android:textAllCaps="false" android:textSize="13sp"
             android:paddingLeft="14dp" android:paddingRight="14dp" android:text="Start" />
+        <!-- the 24 dp icon sits 12 dp inside its 48 dp button: pull it out by that much so its edge lines up with the widgets below -->
         <ImageButton android:id="@+id/gear" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_gear"
-            android:background="@drawable/row_bg" android:contentDescription="Settings" />
+            android:layout_marginRight="-12dp" android:background="@drawable/row_bg" android:contentDescription="Settings" />
     </LinearLayout>
 
     <View android:id="@+id/topSpace" android:layout_width="match_parent" android:layout_height="0dp" />
@@ -28,10 +29,18 @@
             <TextView android:id="@+id/modeM17" android:layout_width="wrap_content" android:layout_height="36dp" android:minWidth="68dp"
                 android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="M17" />
         </LinearLayout>
-        <View android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
-        <TextView android:id="@+id/stepChip" android:layout_width="wrap_content" android:layout_height="32dp" android:gravity="center"
-            android:background="@drawable/pill" android:paddingLeft="12dp" android:paddingRight="12dp" android:textColor="#E4EDF5"
-            android:textSize="12sp" android:textStyle="bold" android:text="12.5 kHz step" />
+        <FrameLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1">
+            <TextView android:id="@+id/powerBtn" android:layout_width="44dp" android:layout_height="42dp" android:layout_gravity="center"
+                android:background="@drawable/seg_bg" android:gravity="center" android:textStyle="bold" android:textSize="14sp"
+                android:textColor="#F59A23" android:text="HI" />
+        </FrameLayout>
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal"
+            android:background="@drawable/seg_bg" android:padding="3dp">
+            <TextView android:id="@+id/modeVfo" android:layout_width="wrap_content" android:layout_height="36dp" android:minWidth="68dp"
+                android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="VFO" />
+            <TextView android:id="@+id/modeMem" android:layout_width="wrap_content" android:layout_height="36dp" android:minWidth="68dp"
+                android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="MEM" />
+        </LinearLayout>
     </LinearLayout>
 
     <FrameLayout android:id="@+id/freqHolder" android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -49,7 +58,7 @@
         <TextView android:id="@+id/tabLive" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp"
             android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="Live" />
         <TextView android:id="@+id/tabHeard" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp"
-            android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="Heard" />
+            android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="Last" />
         <LinearLayout android:id="@+id/tabInbox" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp"
             android:orientation="horizontal" android:gravity="center">
             <TextView android:id="@+id/tabInboxText" android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -64,10 +73,16 @@
         <ScrollView android:id="@+id/panelLive" android:layout_width="match_parent" android:layout_height="match_parent">
             <LinearLayout android:id="@+id/liveBox" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
         </ScrollView>
-        <ScrollView android:id="@+id/panelHeard" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone">
-            <LinearLayout android:id="@+id/heardList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
-                android:background="@drawable/card" />
-        </ScrollView>
+        <LinearLayout android:id="@+id/panelHeard" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:visibility="gone">
+            <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+                <LinearLayout android:id="@+id/heardList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"
+                    android:background="@drawable/card" />
+            </ScrollView>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="6dp" android:gravity="right">
+                <Button android:id="@+id/heardClear" android:layout_width="wrap_content" android:layout_height="44dp" android:minWidth="88dp" android:minHeight="0dp"
+                    android:background="@drawable/btn" android:textColor="#FFFFFF" android:textStyle="bold" android:textAllCaps="false" android:text="Clear" />
+            </LinearLayout>
+        </LinearLayout>
         <LinearLayout android:id="@+id/panelInbox" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:visibility="gone">
             <ScrollView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
                 <LinearLayout android:id="@+id/inboxList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />

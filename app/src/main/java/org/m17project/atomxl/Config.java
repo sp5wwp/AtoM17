@@ -64,6 +64,39 @@ final class Config {
     /** Frequency correction: the radio's reference error in ppm, one decimal (+ = it transmits and receives high). */
     float ppm() { return p.getFloat("ppm", 0f); }
 
+    /** Repeater shift: -1 (transmit below), 0 simplex, +1 (above); the offset in Hz (70 cm default 7.6 MHz). */
+    int shift() { return Math.max(-1, Math.min(1, p.getInt("shift", 0))); }
+    int offset() { return p.getInt("offset", 7_600_000); }
+    /** The transmit frequency: the receive frequency moved by the repeater shift. */
+    int txFreq() { return freq() + shift() * offset(); }
+    static String shiftText(int shift, int offset) {
+        return shift == 0 ? "simplex" : (shift < 0 ? "−" : "+") + String.format(java.util.Locale.US, "%.3f", offset / 1e6).replaceAll("0+$", "").replaceAll("\\.$", "");
+    }
+
+    /** IARU Region (1–3), for the 70 cm band edges the transmit frequency is checked against. */
+    int region() { return Math.max(1, Math.min(3, p.getInt("iaruRegion", 1))); }
+    static int bandLo(int region) { return region == 2 ? 420_000_000 : 430_000_000; }
+    static int bandHi(int region) { return region == 2 ? 450_000_000 : 440_000_000; }
+    static String regionText(int region) { return "Region " + region + " · 70 cm band " + bandLo(region) / 1_000_000 + "–" + bandHi(region) / 1_000_000 + " MHz"; }
+    static String dotted(int hz) {
+        String d = String.format(java.util.Locale.US, "%09d", hz);
+        return d.substring(0, 3) + "." + d.substring(3, 6) + "." + d.substring(6);
+    }
+    /** "Transmits on 431.225.000 MHz", with the band warning when it falls outside the region's 70 cm band. */
+    static CharSequence txCaption(int txHz, int region) {
+        boolean in = txHz >= bandLo(region) && txHz <= bandHi(region);
+        android.text.SpannableStringBuilder b = new android.text.SpannableStringBuilder("Transmits on ");
+        int a = b.length();
+        b.append(dotted(txHz));
+        b.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), a, b.length(), 0);
+        b.setSpan(new android.text.style.TypefaceSpan("monospace"), a, b.length(), 0);
+        b.append(" MHz");
+        if (!in) b.append(" · outside " + bandLo(region) / 1_000_000 + "–" + bandHi(region) / 1_000_000 + " MHz (IARU Region " + region + ")");
+        else b.setSpan(new android.text.style.ForegroundColorSpan(Ui.WHITE), a, a + 11, 0);
+        return b;
+    }
+    static boolean inBand(int txHz, int region) { return txHz >= bandLo(region) && txHz <= bandHi(region); }
+
     SharedPreferences.Editor edit() { return p.edit(); }
 
     static String mhz(int hz) { return String.format(java.util.Locale.US, "%d.%06d", hz / 1_000_000, hz % 1_000_000).replaceAll("0{1,3}$", ""); }

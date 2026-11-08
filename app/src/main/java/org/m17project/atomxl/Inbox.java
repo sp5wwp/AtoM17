@@ -24,6 +24,12 @@ final class Inbox {
 
     Inbox(Context c) {
         p = c.getSharedPreferences("inbox", Context.MODE_PRIVATE);
+        reload();
+    }
+
+    /** Read the messages from the settings again (after a restore). */
+    synchronized void reload() {
+        msgs.clear();
         try {
             JSONArray a = new JSONArray(p.getString("msgs", "[]"));
             for (int i = 0; i < a.length(); i++) {

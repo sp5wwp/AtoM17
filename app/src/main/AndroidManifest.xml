@@ -16,6 +16,10 @@
             </intent-filter>
         </activity>
         <receiver android:name=".MsgNotify$ReplyReceiver" android:exported="false" />
+        <activity android:name=".MemoriesActivity" android:exported="false" android:screenOrientation="portrait" />
+        <activity android:name=".MemEditActivity" android:exported="false" android:screenOrientation="portrait" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".KeysActivity" android:exported="false" android:screenOrientation="portrait" />
+        <activity android:name=".KeyEditActivity" android:exported="false" android:screenOrientation="portrait" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".SettingsActivity" android:exported="false" android:screenOrientation="portrait" />
         <activity android:name=".SettingsPageActivity" android:exported="false" android:screenOrientation="portrait" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".FirmwareActivity" android:exported="false" android:screenOrientation="portrait" />

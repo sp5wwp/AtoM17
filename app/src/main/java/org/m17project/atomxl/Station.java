@@ -208,10 +208,11 @@ final class Station implements Radio.Events, Audio.Sink {
         int hz = cfg.freq();
         // the radio's reference error: positive ppm = it lands high, so ask for a little less
         int cmd = (int) Math.round(hz / (1 + cfg.ppm() * 1e-6));
+        int txHz = cfg.txFreq(), txCmd = (int) Math.round(txHz / (1 + cfg.ppm() * 1e-6));      // repeater shift
         boolean m17 = cfg.m17() || forceM17;
         // M17: wide FM, squelch open and no tones, so the demodulator gets the audio continuously (SignalDeck does the same)
-        boolean ok = radio.setAnalog(cmd, cmd, m17 || cfg.wide(), cfg.high(), m17 ? 0 : cfg.squelch(), m17 ? 0 : cfg.rxTone(), m17 ? 0 : cfg.txTone(), cfg.volume());
-        log("channel " + Config.mhz(hz) + " MHz " + (m17 ? "M17" : "FM") + (cmd != hz ? String.format(java.util.Locale.US, " (%.1f ppm: %d Hz sent)", cfg.ppm(), cmd) : "") + (ok ? "" : " (refused)"));
+        boolean ok = radio.setAnalog(cmd, txCmd, m17 || cfg.wide(), cfg.high(), m17 ? 0 : cfg.squelch(), m17 ? 0 : cfg.rxTone(), m17 ? 0 : cfg.txTone(), cfg.volume());
+        log("channel " + Config.mhz(hz) + " MHz " + (m17 ? "M17" : "FM") + (txHz != hz ? ", TX " + Config.mhz(txHz) + " MHz" : "") + (cmd != hz ? String.format(java.util.Locale.US, " (%.1f ppm: %d Hz sent)", cfg.ppm(), cmd) : "") + (ok ? "" : " (refused)"));
         if (m17) { synchronized (rxLock) { M17Native.rxReset(rxh); } configureRx(); symQueue.clear(); rxStats.reset(); initDfe(); }
         evalCapture();
     }
@@ -310,12 +311,27 @@ final class Station implements Radio.Events, Audio.Sink {
             });
             r.tap = symQueue::add;
             r.stats = rxStats::add;
+            r.scope = scopeOn;
             dfe = r;
         } catch (Throwable t) { log("equaliser: " + t); }
     }
     volatile float dfeQuality;
     /** Receive measurements on the equaliser (Bench › Receive signal, the main status line). */
     final RxStats rxStats = new RxStats();
+    /** The receive scope (Bench) is on screen: the equaliser also runs free while no M17 signal is there. */
+    void setScope(boolean on) { scopeOn = on; org.m17project.atomxl.dfe.M17Receiver r = dfe; if (r != null) r.scope = on; }
+    private volatile boolean scopeOn;
+    /** Receive processing time against real time (equaliser, decoder, audio), for Bench and the log. */
+    private long dspNanos, dspSince = System.nanoTime(), dspLogAt;
+    volatile float dspLoad = Float.NaN;
+    private void dspTime(long nanos) {
+        dspNanos += nanos;
+        long now = System.nanoTime(), span = now - dspSince;
+        if (span >= 5_000_000_000L) {
+            dspLoad = 100f * dspNanos / span; dspNanos = 0; dspSince = now;
+            if (now - dspLogAt >= 300_000_000_000L) { dspLogAt = now; log(String.format(java.util.Locale.US, "receive processing: %.1f %% of a core", dspLoad)); }
+        }
+    }
     private final short[] dec = new short[4096];
     private long statusAt;
 
@@ -333,6 +349,7 @@ final class Station implements Radio.Events, Audio.Sink {
         int n8 = decimator.run(stereo, frames, pcm8);
         recordBlock(pcm8, n8);
         if (cfg.invert()) for (int i = 0; i < n8; i++) pcm8[i] = (short) Math.max(-32767, -pcm8[i]);   // polarity: before the equaliser
+        long t0 = System.nanoTime();
         if (dfe != null) dfe.feed(pcm8, n8);
         float[] fr = symQueue.poll();
         while (symQueue.size() > 4) fr = symQueue.poll();          // never lag more than a few frames
@@ -341,6 +358,7 @@ final class Station implements Radio.Events, Audio.Sink {
             evs = M17Native.rxPushSymbols(rxh, fr != null ? fr : SILENT);
             n = M17Native.rxReadAudio(rxh, dec);
         }
+        dspTime(System.nanoTime() - t0);                            // not the audio write: it blocks on the speaker
         if (n > 0) {
             if (cfg.agc()) agc.run(dec, n, audioRate / 50);
             if (m17Track == null || m17TrackRate != audioRate) {
@@ -364,7 +382,10 @@ final class Station implements Radio.Events, Audio.Sink {
             JSONObject e = new JSONObject(json), l = e.getJSONObject("link");
             int kind = e.getInt("kind");
             RxEntry r;
-            if (kind == M17Native.EV_STREAM_START || (kind == M17Native.EV_LINK_UPDATE && current == null)) { r = new RxEntry(); current = r; synchronized (heard) { heard.add(0, r); if (heard.size() > 300) heard.remove(heard.size() - 1); } }
+            if (kind == M17Native.EV_STREAM_START || (kind == M17Native.EV_LINK_UPDATE && current == null)) {
+                r = new RxEntry(); current = r; synchronized (heard) { heard.add(0, r); if (heard.size() > 300) heard.remove(heard.size() - 1); }
+                if (cfg.p.getInt("wakeFor", 1) >= 2) wakeScreen();
+            }
             else if (kind == M17Native.EV_PACKET || kind == M17Native.EV_PACKET_BAD) { r = new RxEntry(); synchronized (heard) { heard.add(0, r); } }
             else r = current;
             if (r == null) return;
@@ -379,7 +400,10 @@ final class Station implements Radio.Events, Audio.Sink {
                 r.protocol = e.getInt("protocol"); r.ended = true;
                 r.kind = r.protocol == 5 ? "sms" : "packet";
                 r.sms = r.protocol == 5 ? e.getString("sms") : "protocol 0x" + Integer.toHexString(r.protocol) + ", " + e.getInt("length") + " bytes: " + e.getString("data");
-                if (r.protocol == 5) { inbox.add(true, r.src, r.dst, r.sms); MsgNotify.post(ctx, cfg, r.src, r.dst, r.sms); }
+                if (r.protocol == 5) {
+                    inbox.add(true, r.src, r.dst, r.sms); MsgNotify.post(ctx, cfg, r.src, r.dst, r.sms);
+                    if (cfg.p.getInt("wakeFor", 1) >= 1) wakeScreen();
+                }
                 log("M17 packet " + r.src + " > " + r.dst + ": " + r.sms);
             } else if (kind == M17Native.EV_PACKET_BAD) { r.kind = "bad"; r.ended = true; r.sms = "packet with a bad CRC"; }
             final RxEntry fr = r;
@@ -486,6 +510,17 @@ final class Station implements Radio.Events, Audio.Sink {
         @Override public void log(String s) { Station.this.log(s); }
     };
     void startPttKey() { if (open) pttKey.start(keyListener); }
+
+    /** A backup was restored: messages, receiver, channel, PTT key and GNSS follow the new settings. */
+    void restored() {
+        inbox.reload();
+        configureRx();
+        applyChannel();
+        if (open) { pttKey.stop(); startPttKey(); }
+        updateGnss();
+        log("settings restored from a backup");
+        state();
+    }
     private volatile Thread txThread;
     static final long TX_LIMIT_MS = 115_000;   // under the module's own 120 s timer
 
@@ -502,6 +537,25 @@ final class Station implements Radio.Events, Audio.Sink {
         t.setPriority(Thread.MAX_PRIORITY);
         txThread = t;
         t.start();
+    }
+
+    /** Light the screen for a few seconds (Settings › Screen and power: wake for messages, or calls and messages). */
+    @SuppressWarnings("deprecation")
+    private void wakeScreen() {
+        try {
+            android.os.PowerManager pm = (android.os.PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
+            if (pm == null || pm.isInteractive()) return;
+            android.os.PowerManager.WakeLock w = pm.newWakeLock(android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+                    | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP | android.os.PowerManager.ON_AFTER_RELEASE, "atom17:wake");
+            w.acquire(5000);
+        } catch (Throwable t) { log("wake: " + t.getMessage()); }
+    }
+
+    /** Microphone gain, Settings › Bench › Voice check (dB). */
+    float micGain() { return (float) Math.pow(10, cfg.p.getInt("micGainDb", 0) / 20.0); }
+    static void gain(short[] p, int n, float g) {
+        if (g == 1f) return;
+        for (int i = 0; i < n; i++) p[i] = (short) Math.max(-32767, Math.min(32767, Math.round(p[i] * g)));
     }
 
     @SuppressLint("MissingPermission")
@@ -529,6 +583,7 @@ final class Station implements Radio.Events, Audio.Sink {
             while (pttHeld && System.currentTimeMillis() - t0 < TX_LIMIT_MS) {
                 int n = rec.read(in, 0, in.length);
                 if (n <= 0) continue;
+                gain(in, n, micGain());
                 txLevelDb = levelDb(in, n);
                 for (int i = 0; i < n; i++) {                       // 8 -> 32 kHz, linear, both channels
                     for (int k = 0; k < 4; k++) {
@@ -559,9 +614,19 @@ final class Station implements Radio.Events, Audio.Sink {
      * encryption, signing and META settings must not stop it (2026-11-08: AES selected without a key blocked SMS).
      */
     String configureTx(String dst, boolean packet) {
-        if (packet)
-            return M17Native.txConfigure(txh, cfg.src().trim(), dst.trim(), cfg.can(), M17Native.META_TEXT, "", 0, 0, 0, 0, 0, cfg.station(), 0,
-                    "", "", M17Native.ENC_NONE, 128, null, 8, 0, false, null) == 0 ? null : "the encoder refused the callsigns or CAN";
+        if (packet) {
+            // META position in the packet's LSF when it is selected and a position is known (out of spec, see m17tx_packet);
+            // otherwise an empty META. No fix never stops an SMS.
+            android.location.Location loc = cfg.metaKind() == M17Native.META_GNSS ? (gnssFix != null ? gnssFix : lastLocation()) : null;
+            int v = 0; double la = 0, lo = 0; float al = 0, sp = 0; int br = 0;
+            if (loc != null) {
+                la = loc.getLatitude(); lo = loc.getLongitude(); v = 1 << 3;
+                if (loc.hasAltitude()) { al = (float) loc.getAltitude(); v |= 1 << 2; }
+                if (loc.hasSpeed() && loc.hasBearing()) { sp = loc.getSpeed() * 3.6f; br = Math.round(loc.getBearing()); v |= 1 << 1; }
+            }
+            return M17Native.txConfigure(txh, cfg.src().trim(), dst.trim(), cfg.can(), loc != null ? M17Native.META_GNSS : M17Native.META_TEXT, "",
+                    la, lo, al, sp, br, cfg.station(), v, "", "", M17Native.ENC_NONE, 128, null, 8, 0, false, null) == 0 ? null : "the encoder refused the callsigns or CAN";
+        }
         double lat = 0, lon = 0; float alt = 0, spd = 0; int brg = 0, validity = 0;
         if (cfg.metaKind() == M17Native.META_GNSS) {
             android.location.Location loc = lastLocation();
@@ -765,6 +830,7 @@ final class Station implements Radio.Events, Audio.Sink {
                 if (tone != null) { System.arraycopy(tone, frames * 320, pcm, 0, 320); got = 320; }   // no sleep: the ring-fill pacing in flush() sets the rate
                 else while (got < 320) { int r = rec.read(pcm, got, 320 - got); if (r <= 0) { shortReads++; break; } got += r; }
                 if (got < 320) java.util.Arrays.fill(pcm, Math.max(0, got), 320, (short) 0);
+                gain(pcm, 320, micGain());
                 txLevelDb = levelDb(pcm, 320);
                 if (s.keyed && System.currentTimeMillis() - lastStat >= 1000) { lastStat = System.currentTimeMillis(); symStatus("on air"); }
                 s.add(b, M17Native.txVoice(txh, pcm, b));

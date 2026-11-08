@@ -44,7 +44,11 @@ public final class MainActivity extends Activity implements Station.Listener {
     private Station st;
     private Config cfg;
     private FreqView freq;
-    private TextView status, sigText, txBar, modeFm, modeM17, stepChip, badge;
+    private TextView powerBtn, shiftChip, shiftTx;
+    private LinearLayout shiftLine;
+    private TextView status, sigText, txBar, modeFm, modeM17, modeVfo, modeMem, badge, memCh, memName, memFreq, memTag;
+    private LinearLayout memCard;
+    private Memories mem;
     private View sigBar;
     private Button power;
     private LinearLayout heardList, inboxList;
@@ -65,21 +69,70 @@ public final class MainActivity extends Activity implements Station.Listener {
 
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         st = Station.get(this);
         cfg = st.cfg;
+        mem = new Memories(cfg);
         setContentView(R.layout.main);
 
         status = findViewById(R.id.status); sigText = findViewById(R.id.sigText); txBar = findViewById(R.id.txBar);
         power = findViewById(R.id.power); modeFm = findViewById(R.id.modeFm); modeM17 = findViewById(R.id.modeM17);
-        stepChip = findViewById(R.id.stepChip); badge = findViewById(R.id.inboxBadge);
+        modeVfo = findViewById(R.id.modeVfo); modeMem = findViewById(R.id.modeMem); badge = findViewById(R.id.inboxBadge);
         heardList = findViewById(R.id.heardList); inboxList = findViewById(R.id.inboxList);
         sigBar = findViewById(R.id.sigBar);
         android.graphics.drawable.GradientDrawable bd = new android.graphics.drawable.GradientDrawable();
         bd.setCornerRadius(Ui.dp(this, 1)); bd.setColor(Ui.IDLE); sigBar.setBackground(bd);
 
         freq = new FreqView(this);
-        ((FrameLayout) findViewById(R.id.freqHolder)).addView(freq);
+        FrameLayout freqBox = findViewById(R.id.freqHolder);
+        // VFO: the digits, and under them the repeater shift with the TX frequency (hidden for simplex)
+        LinearLayout freqCol = Ui.vbox(this);
+        freqCol.addView(freq);
+        shiftLine = Ui.hbox(this);
+        shiftLine.setGravity(android.view.Gravity.CENTER);
+        shiftLine.setPadding(0, 0, 0, Ui.dp(this, 8));
+        shiftChip = Ui.chip(this, ""); shiftChip.setTextSize(12); shiftChip.setSingleLine(true);
+        shiftTx = Ui.text(this, "", 12.5f, Ui.TEXT3, false); shiftTx.setSingleLine(true);
+        shiftTx.setPadding(Ui.dp(this, 7), 0, 0, 0);
+        shiftLine.addView(shiftChip); shiftLine.addView(shiftTx);
+        shiftLine.setVisibility(View.GONE);
+        shiftLine.setContentDescription("Channel settings; tap for tuning, shift and power");
+        shiftLine.setOnClickListener(v -> startActivity(new Intent(this, SettingsPageActivity.class).putExtra("page", "radio").putExtra("title", "Tuning, FM and power")));
+        freqCol.addView(shiftLine, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        freqBox.addView(freqCol);
+        // MEM mode: a compact card in place of the digits: ‹ [CH n name / frequency MHz tag] ›
+        memCard = Ui.hbox(this);
+        memCard.setVisibility(View.GONE);
+        android.widget.ImageButton prev = new android.widget.ImageButton(this), next = new android.widget.ImageButton(this);
+        prev.setImageResource(R.drawable.ic_prev); next.setImageResource(R.drawable.ic_next);
+        prev.setBackgroundResource(R.drawable.row_bg); next.setBackgroundResource(R.drawable.row_bg);
+        prev.setContentDescription("Previous memory"); next.setContentDescription("Next memory");
+        prev.setOnClickListener(v -> memStep(-1)); next.setOnClickListener(v -> memStep(1));
+        LinearLayout mid = Ui.vbox(this);
+        mid.setBackgroundResource(R.drawable.row_bg);
+        mid.setPadding(Ui.dp(this, 6), Ui.dp(this, 6), Ui.dp(this, 4), Ui.dp(this, 6));
+        mid.setGravity(android.view.Gravity.CENTER_VERTICAL | android.view.Gravity.START);
+        LinearLayout l1 = Ui.hbox(this);
+        l1.setGravity(android.view.Gravity.BOTTOM);
+        memCh = Ui.mono(this, "", 18, Ui.ORANGE); memCh.setTypeface(Ui.MONO_B);
+        memName = Ui.text(this, "", 18, Ui.WHITE, true);
+        memName.setSingleLine(true); memName.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        memName.setPadding(Ui.dp(this, 8), 0, 0, 0);
+        l1.addView(memCh); l1.addView(memName, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        LinearLayout l2 = Ui.hbox(this);
+        memFreq = Ui.mono(this, "", 16, Ui.WHITE); memFreq.setTypeface(Ui.MONO_B); memFreq.setSingleLine(true);
+        TextView mhz = Ui.text(this, "MHz", 12, Ui.TEXT3, false);
+        mhz.setPadding(Ui.dp(this, 6), 0, Ui.dp(this, 6), 0);
+        memTag = Ui.chip(this, ""); memTag.setSingleLine(true);
+        l2.addView(memFreq); l2.addView(mhz);
+        memTag.setTextSize(12);
+        mid.addView(l1, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        mid.addView(l2, Ui.matchWrap(this, 4));
+        mid.addView(memTag, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{ topMargin = Ui.dp(MainActivity.this, 5); }});
+        mid.setOnClickListener(v -> startActivity(new Intent(this, MemoriesActivity.class)));
+        memCard.addView(prev, new LinearLayout.LayoutParams(Ui.dp(this, 36), ViewGroup.LayoutParams.MATCH_PARENT));
+        memCard.addView(mid, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
+        memCard.addView(next, new LinearLayout.LayoutParams(Ui.dp(this, 36), ViewGroup.LayoutParams.MATCH_PARENT));
+        freqBox.addView(memCard, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         freq.setHz(cfg.freq());
         freq.setOnChange(hz -> { cfg.edit().putInt("freq", hz).apply(); st.applyChannel(); });
         freq.setOnLongClickListener(v -> { typeFrequency(); return true; });
@@ -88,7 +141,7 @@ public final class MainActivity extends Activity implements Station.Listener {
         findViewById(R.id.header).post(() -> {
             View space = findViewById(R.id.topSpace), holder = findViewById(R.id.freqHolder);
             int[] at = new int[2]; holder.getLocationInWindow(at);
-            int target = Math.round(getWindow().getDecorView().getHeight() * 0.25f);
+            int target = Math.round(getWindow().getDecorView().getHeight() * 0.21f);
             space.getLayoutParams().height = Math.max(0, target - at[1]);
             space.requestLayout();
         });
@@ -97,7 +150,17 @@ public final class MainActivity extends Activity implements Station.Listener {
         findViewById(R.id.gear).setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
         modeFm.setOnClickListener(v -> setMode(false));
         modeM17.setOnClickListener(v -> setMode(true));
-        stepChip.setOnClickListener(v -> pickStep());
+        modeVfo.setOnClickListener(v -> setMem(false));
+        modeMem.setOnClickListener(v -> setMem(true));
+        powerBtn = findViewById(R.id.powerBtn);
+        powerBtn.setOnClickListener(v -> { SettingsPageActivity.setHigh(cfg, !cfg.high()); st.applyChannel(); onState(); });
+        modeMem.setOnLongClickListener(v -> { storeMemory(null); return true; });
+        findViewById(R.id.heardClear).setOnClickListener(v -> {
+            synchronized (st.heard) { if (st.heard.isEmpty()) return; }
+            new AlertDialog.Builder(this).setMessage("Clear the list of stations heard?")
+                    .setPositiveButton("Clear", (d, w) -> { synchronized (st.heard) { st.heard.clear(); } rebuildHeard(); updateLive(); })
+                    .setNegativeButton("Cancel", null).show();
+        });
         for (int i = 0; i < TABS.length; i++) { final int k = i; findViewById(TABS[i]).setOnClickListener(v -> showTab(k)); }
         findViewById(R.id.smsNew).setOnClickListener(v -> m17tab.smsDialog(null));
         findViewById(R.id.smsClear).setOnClickListener(v -> {
@@ -157,14 +220,39 @@ public final class MainActivity extends Activity implements Station.Listener {
 
     private void setMode(boolean m17) { cfg.edit().putBoolean("m17", m17).apply(); st.applyChannel(); onState(); }
 
-    private void pickStep() {
-        int[] steps = SettingsPageActivity.STEPS;
-        String[] names = new String[steps.length];
-        int cur = 5;
-        for (int i = 0; i < steps.length; i++) { names[i] = SettingsActivity.step(steps[i]); if (steps[i] == cfg.step()) cur = i; }
-        new AlertDialog.Builder(this).setTitle("Tuning step").setSingleChoiceItems(names, cur, (d, w) -> {
-            cfg.edit().putInt("step", steps[w]).apply(); onState(); d.dismiss();
-        }).show();
+    // ---- VFO / MEM ----
+
+    private void setMem(boolean on) {
+        if (on && mem.all().isEmpty()) {
+            new AlertDialog.Builder(this).setTitle("No memories yet")
+                    .setMessage("Store this channel as memory 1? Long-press MEM stores the current channel at any time; Settings › Memories edits them.")
+                    .setPositiveButton("Store", (d, w) -> storeMemory(() -> setMem(true))).setNegativeButton("Cancel", null).show();
+            return;
+        }
+        if (on) mem.enter(st, mem.index());
+        else if (mem.memMode()) mem.vfo(st);
+        freq.setHz(cfg.freq());
+        onState();
+    }
+
+    private void memStep(int d) { mem.apply(st, mem.index() + d); freq.setHz(cfg.freq()); onState(); }
+
+    private void pickMemory() { startActivity(new Intent(this, MemoriesActivity.class)); }
+
+    /** Store the current channel as a new memory, asking for its name. */
+    private void storeMemory(Runnable then) {
+        Memories.Ch c = Memories.Ch.current(cfg);
+        EditText e = new EditText(this);
+        e.setText(c.name); e.setSelectAllOnFocus(true);
+        new AlertDialog.Builder(this).setTitle("Store " + Config.mhz(c.hz) + " MHz").setMessage(c.summary()).setView(e)
+                .setPositiveButton("Store", (d, w) -> {
+                    c.name = e.getText().toString().trim().isEmpty() ? Config.mhz(c.hz) : e.getText().toString().trim();
+                    List<Memories.Ch> l = mem.all(); l.add(c); mem.save(l);
+                    cfg.edit().putInt("memIdx", l.size() - 1).apply();
+                    Toast.makeText(this, "Stored as memory " + l.size(), Toast.LENGTH_SHORT).show();
+                    onState();
+                    if (then != null) then.run();
+                }).setNegativeButton("Cancel", null).show();
     }
 
     private void typeFrequency() {
@@ -344,7 +432,16 @@ public final class MainActivity extends Activity implements Station.Listener {
 
         metaValue.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         metaValue2.setVisibility(View.GONE);
-        if (packet && "sms".equals(r.kind)) { metaLabel.setText("Message"); metaValue.setText(r.sms); }
+        if (packet && "sms".equals(r.kind)) {
+            metaLabel.setText(r.posValid ? "Message · with position" : "Message"); metaValue.setText(r.sms);
+            if (r.posValid) {                                          // position in the packet's LSF (out of spec, common)
+                metaValue2.setText(String.format(Locale.US, "%.5f° %s  %.5f° %s", Math.abs(r.lat), r.lat >= 0 ? "N" : "S", Math.abs(r.lon), r.lon >= 0 ? "E" : "W")
+                        + (r.altValid ? String.format(Locale.US, " · %.0f m", r.alt) : ""));
+                metaValue2.setVisibility(View.VISIBLE);
+                posLat = r.lat; posLon = r.lon; posName = r.src;
+                metaButtons.setVisibility(View.VISIBLE);
+            }
+        }
         else if (packet) { metaLabel.setText("Payload"); metaValue.setText(r.sms.isEmpty() ? "receiving…" : r.sms); }
         else if (r.enc == 2) { metaLabel.setText("META · nonce"); metaValue.setText("Carries the AES nonce, no text"); metaValue.setTypeface(android.graphics.Typeface.DEFAULT); }
         else if (r.metaKind == 1) { metaLabel.setText("META · text"); metaValue.setText(r.text.isEmpty() ? "receiving…" : r.text); }
@@ -425,7 +522,7 @@ public final class MainActivity extends Activity implements Station.Listener {
     private void updateSignal() {
         int color; String s;
         if (!st.isOpen()) { color = Ui.IDLE; s = st.isStarting() ? "Starting the radio…" : "Radio off"; }
-        else if (st.isTransmitting()) { color = 0xFFFF8A6B; s = "Transmitting · " + Config.mhz(cfg.freq()) + " MHz · " + (cfg.high() ? "high" : "low") + " power"; }
+        else if (st.isTransmitting()) { color = 0xFFFF8A6B; s = "Transmitting · " + Config.mhz(cfg.txFreq()) + " MHz" + (cfg.shift() != 0 ? " (" + Config.shiftText(cfg.shift(), cfg.offset()) + ")" : "") + " · " + (cfg.high() ? "high" : "low") + " power"; }
         else if (!cfg.m17()) { boolean o = st.isReceiving(); color = o ? Ui.OK : Ui.IDLE; s = o ? "Carrier · squelch open" : "Squelch closed"; }
         else {
             int state = lastStatus == null ? 0 : lastStatus.optInt("state");
@@ -485,7 +582,52 @@ public final class MainActivity extends Activity implements Station.Listener {
         boolean m17 = cfg.m17();
         modeFm.setBackgroundResource(m17 ? 0 : R.drawable.seg_on); modeFm.setTextColor(m17 ? Ui.TEXT3 : 0xFF1B1206);
         modeM17.setBackgroundResource(m17 ? R.drawable.seg_on : 0); modeM17.setTextColor(m17 ? 0xFF1B1206 : Ui.TEXT3);
-        stepChip.setText(SettingsActivity.step(cfg.step()) + " step");
+        boolean memOn = mem.memMode() && !mem.all().isEmpty();
+        modeVfo.setBackgroundResource(memOn ? 0 : R.drawable.seg_on); modeVfo.setTextColor(memOn ? Ui.TEXT3 : 0xFF1B1206);
+        modeMem.setBackgroundResource(memOn ? R.drawable.seg_on : 0); modeMem.setTextColor(memOn ? 0xFF1B1206 : Ui.TEXT3);
+        // MEM: the compact card takes the digits' place (they stay laid out, invisible, so the card keeps their height)
+        memCard.setVisibility(memOn ? View.VISIBLE : View.GONE);
+        // the memory decides FM or M17, so the switch is hidden (kept in the layout, VFO/MEM stays put)
+        ((View) modeFm.getParent()).setVisibility(memOn ? View.INVISIBLE : View.VISIBLE);
+        powerBtn.setVisibility(memOn ? View.INVISIBLE : View.VISIBLE);
+        boolean vfoOn = !memOn;
+        if (vfoOn) {
+            shiftChip.setText(Memories.Ch.current(cfg).tag(true));
+            if (cfg.shift() != 0) {
+                int tx = cfg.txFreq(), r = cfg.region();
+                boolean ok = Config.tunable(tx) && Config.inBand(tx, r);
+                android.text.SpannableStringBuilder b = new android.text.SpannableStringBuilder("TX ");
+                int a = b.length();
+                b.append(Config.dotted(tx));
+                b.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), a, b.length(), 0);
+                b.setSpan(new android.text.style.TypefaceSpan("monospace"), a, b.length(), 0);
+                b.setSpan(new android.text.style.ForegroundColorSpan(ok ? Ui.WHITE : Ui.BAD), a, b.length(), 0);
+                if (!ok) b.append(Config.tunable(tx) ? "  out of band" : "  out of range");
+                shiftTx.setText(b);
+                shiftTx.setTextColor(ok ? Ui.TEXT3 : Ui.BAD);
+                shiftTx.setVisibility(View.VISIBLE);
+            } else shiftTx.setVisibility(View.GONE);
+        }
+        boolean shifted = vfoOn;
+        if ((shiftLine.getVisibility() == View.VISIBLE) != shifted) shiftLine.setVisibility(shifted ? View.VISIBLE : View.GONE);
+        powerBtn.setText(cfg.high() ? "HI" : "LO");
+        powerBtn.setContentDescription(cfg.high() ? "RF power: high, tap for low" : "RF power: low, tap for high");
+        // MEM: the card is a little taller than the digits, for its three lines
+        View fb = findViewById(R.id.freqHolder);
+        int minH = memOn ? freq.getHeight() + Ui.dp(this, 24) : 0;
+        if (fb.getMinimumHeight() != minH) fb.setMinimumHeight(minH);
+        if (memOn && freq.getHeight() == 0) fb.post(this::onState);   // not laid out yet: size it once it is
+        freq.setVisibility(memOn ? View.INVISIBLE : View.VISIBLE);
+        if (memOn) {
+            List<Memories.Ch> l = mem.all();
+            int i = Math.min(mem.index(), l.size() - 1);
+            Memories.Ch c = l.get(i);
+            memCh.setText("CH" + (i + 1));
+            memName.setText(c.name);
+            memFreq.setText(c.dotted());
+            memTag.setText(c.tag());
+            if (freq.hz() != cfg.freq()) freq.setHz(cfg.freq());
+        }
         power.setText(st.isOpen() || st.isStarting() ? "Stop" : "Start");
         String s;
         if (st.isFlashing()) s = "Loading firmware…";
@@ -511,12 +653,31 @@ public final class MainActivity extends Activity implements Station.Listener {
             else txBar.setVisibility(View.GONE);
         }
         txBar.setBackground(bar);
+        screenOn();
         updateSignal();
         updateLive();
         if (tab == 2 && !st.isTransmitting()) rebuildInbox();      // a sent SMS
     }
 
-    @Override public void onStatus(JSONObject s) { lastStatus = s; updateSignal(); updateLive(); }
+    @Override public void onStatus(JSONObject s) { lastStatus = s; updateSignal(); updateLive(); screenOn(); }
+
+    private long activeUntil;
+    private boolean keptOn;
+
+    /** Keep the screen on as Settings › Screen and power says: always, never, or while something is on the air (+10 s). */
+    private void screenOn() {
+        int how = cfg.p.getInt("screenOn", 1);                       // 0 never, 1 while active, 2 always
+        boolean active = st.isTransmitting() || st.isStarting() || st.isFlashing()
+                || (cfg.m17() ? lastStatus != null && lastStatus.optInt("state") != 0 : st.isReceiving());
+        long now = System.currentTimeMillis();
+        if (active) activeUntil = now + 10_000;
+        boolean want = how == 2 || (how == 1 && now < activeUntil);
+        if (want != keptOn) {
+            keptOn = want;
+            if (want) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    }
 
     @Override public void onRx(Station.RxEntry e) {
         rebuildHeard();

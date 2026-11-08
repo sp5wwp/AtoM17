@@ -59,9 +59,13 @@ public final class M17Receiver {
         public int lichErrors = -1;          // Golay corrections in the LICH
         public boolean confirmed, packet;
         public float gain;                   // preamble RMS of the input, audio counts
+        public boolean free;                 // no M17 signal: the equaliser run free on whatever the radio hears (eye only)
     }
     public interface StatsTap { void frame(Stats s); }
     public volatile StatsTap stats;
+    /** While a scope is on screen: with no M17 signal, one free-running equaliser pass per frame time feeds its eye. */
+    public volatile boolean scope;
+    private long lastScope48;
 
     private void stats(float[] sym, float mse, int syncHits, int[] exact, M17.Stream st, boolean confirmed, boolean packet) {
         StatsTap t = stats; if (t == null) return;
@@ -165,6 +169,25 @@ public final class M17Receiver {
         if (state == State.IDLE && n48 - lastLate48 >= (long) LATE_EVERY * 192 * SPS48) { lastLate48 = n48; lateEntry(); }
         while (state == State.STREAM && n48 > next48 + 192 * SPS48 + 5 * L + 60) frame();
         while (state == State.PACKET && n48 > next48 + 192 * SPS48 + 5 * L + 60) packetFrame();
+        if (scope && state == State.IDLE && n48 - lastScope48 >= 192L * SPS48) { lastScope48 = n48; freeFrame(); }
+    }
+
+    /** The equaliser over the last frame time at an arbitrary symbol phase, scaled by that audio's RMS: noise looks like noise. */
+    private void freeFrame() {
+        StatsTap t = stats; if (t == null) return;
+        long p = n48 - 192L * SPS48 - 5L * L - 60;
+        if (p < 0 || n48 - p >= RING) return;
+        double e = 0; int m = 0;
+        for (long i = p; i < p + 192L * SPS48; i += 3) { float v = at(i); e += v * v; m++; }
+        float rms = (float) Math.sqrt(e / Math.max(1, m));
+        if (rms < 1f) return;
+        float keep = gain; gain = rms;
+        float[] ys = new float[192];
+        float mse = run(p, 192, past.clone(), ys, 0, null);
+        gain = keep;
+        Stats s = new Stats();
+        s.soft = ys; s.mse = mse; s.free = true; s.gain = rms;
+        t.frame(s);
     }
     private float at(long i) { return i < 0 || i >= n48 || n48 - i >= RING ? 0f : x48[(int) (i % RING)]; }
 

@@ -132,6 +132,33 @@ final class Ui {
         return h;
     }
 
+    /** A segmented switch (FM | M17), as on the main screen; {@code pick} gets the chosen index. */
+    static LinearLayout seg(Context c, String[] opts, int sel, java.util.function.IntConsumer pick) {
+        LinearLayout l = hbox(c);
+        l.setBackgroundResource(R.drawable.seg_bg);
+        int p = dp(c, 3); l.setPadding(p, p, p, p);
+        TextView[] b = new TextView[opts.length];
+        for (int i = 0; i < opts.length; i++) {
+            final int k = i;
+            b[i] = text(c, opts[i], 14, TEXT3, true);
+            b[i].setGravity(Gravity.CENTER);
+            b[i].setOnClickListener(v -> { for (int j = 0; j < b.length; j++) segOn(b[j], j == k); pick.accept(k); });
+            segOn(b[i], i == sel);
+            l.addView(b[i], new LinearLayout.LayoutParams(0, dp(c, 38), 1));
+        }
+        return l;
+    }
+    private static void segOn(TextView t, boolean on) { t.setBackgroundResource(on ? R.drawable.seg_on : 0); t.setTextColor(on ? 0xFF1B1206 : TEXT3); }
+
+    /** A plain small tag ("M17 · CAN 0"). */
+    static TextView chip(Context c, String s) {
+        TextView t = text(c, s, 11, TEXT2, true);
+        GradientDrawable d = new GradientDrawable(); d.setCornerRadius(dp(c, 5)); d.setColor(0x1FFFFFFF);
+        t.setBackground(d);
+        t.setPadding(dp(c, 6), dp(c, 2), dp(c, 6), dp(c, 2));
+        return t;
+    }
+
     static LinearLayout.LayoutParams matchWrap(Context c, int topDp) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.topMargin = dp(c, topDp);

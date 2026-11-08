@@ -92,7 +92,13 @@ int m17_link_from_lsf(m17rx_link_t *link, const lsf_t *lsf, int from_lich, m17_t
     for (int i = 0; i < 14; i++)
         empty &= (lsf->meta[i] == 0);
 
-    if (!l.stream)
+    /* AtoM17: a position in a packet's LSF, TYPE marked as for a stream (META subtype 1, no encryption). Not in the
+       spec yet, but sent by several implementations and expected to be added. */
+    int pkt_pos = !l.stream && l.enc_type == M17RX_ENC_NONE && l.enc_subtype == 1 && !empty;
+    if (pkt_pos)
+        l.data_type = l.signed_stream = 0;
+
+    if (!l.stream && !pkt_pos)
     {
         /* packet mode: only the packet bit and CAN are defined in TYPE */
         l.data_type = l.enc_type = l.enc_subtype = l.signed_stream = 0;

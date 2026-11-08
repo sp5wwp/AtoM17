@@ -311,9 +311,15 @@ int m17tx_packet(m17tx_t* tx, const uint8_t* data, int len, int8_t* out)
 
     lsf_t lsf = tx->lsf;                               /* packet mode: only Packet/Stream = 0 and CAN in TYPE */
     uint16_t t = (uint16_t)((tx->cfg.can & 0xF) << 7);
+    /* out of spec (for now): a position in META, TYPE marked as a stream marks it (META subtype 1); several
+       implementations do this and the spec is expected to follow. The META was set by m17tx_configure. */
+    int pos = tx->cfg.meta_kind == M17TX_META_GNSS && tx->cfg.enc == M17TX_ENC_NONE;
+    if (pos)
+        t |= M17_TYPE_META_POSITION;
+    else
+        memset(lsf.meta, 0, sizeof(lsf.meta));
     lsf.type[0] = t >> 8;
     lsf.type[1] = t & 0xFF;
-    memset(lsf.meta, 0, sizeof(lsf.meta));
     update_LSF_CRC(&lsf);
 
     uint32_t n = 0;

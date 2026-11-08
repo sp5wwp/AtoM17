@@ -45,6 +45,7 @@ final class RxStats {
         int historyN;
         final float[] eye = new float[EYE_KEEP * EYE_POINTS];
         int eyeN;
+        boolean free;                                  // the eye shows the free-running equaliser (no M17 signal)
     }
 
     private final Snap s = new Snap();
@@ -55,11 +56,13 @@ final class RxStats {
         Snap n = new Snap();
         System.arraycopy(n.hist, 0, s.hist, 0, HIST_BINS);
         s.frames = 0; s.lastAt = 0; s.ser = s.serNow = s.evm = s.metric = s.levelDb = s.innerOuter = Float.NaN;
-        s.lichErrors = s.syncHits = s.confirmedPct = -1; s.historyN = 0; s.eyeN = 0; eyeHead = 0; confirmed = 0;
+        s.lichErrors = s.syncHits = s.confirmedPct = -1; s.historyN = 0; s.eyeN = 0; eyeHead = 0; confirmed = 0; s.free = false;
         innerSum = outerSum = 0; innerN = outerN = 0;
     }
 
     synchronized void add(M17Receiver.Stats f) {
+        if (f.free) { eye(f.soft); s.free = true; return; }             // no signal: only the eye moves
+        s.free = false;
         s.frames++; s.lastAt = System.currentTimeMillis();
         if (f.confirmed) confirmed++;
         s.confirmedPct = (int) (100 * confirmed / s.frames);
@@ -83,8 +86,11 @@ final class RxStats {
         for (int i = 0; i < HIST_BINS; i++) s.hist[i] *= 0.92f;          // about the last dozen frames
         if (innerN > 0 && outerN > 0) s.innerOuter = (float) ((innerSum / innerN) / (outerSum / outerN));
         if (innerN + outerN > 20000) { innerSum *= 0.5; outerSum *= 0.5; innerN /= 2; outerN /= 2; }
-        // eye: traces centred on symbols spread over the frame, from one symbol before to one after
-        float[] y = f.soft;
+        eye(f.soft);
+    }
+
+    /** Traces centred on symbols spread over the frame, from one symbol before to one after. */
+    private void eye(float[] y) {
         int first = 8 + RC_SPAN + 1, last = y.length - RC_SPAN - 2;
         for (int t = 0; t < EYE_PER_FRAME; t++) {
             int k = first + (int) ((long) t * (last - first) / (EYE_PER_FRAME - 1));
@@ -108,7 +114,7 @@ final class RxStats {
         c.lichErrors = s.lichErrors; c.syncHits = s.syncHits; c.confirmedPct = s.confirmedPct; c.levelDb = s.levelDb; c.innerOuter = s.innerOuter;
         System.arraycopy(s.hist, 0, c.hist, 0, HIST_BINS);
         System.arraycopy(s.history, 0, c.history, 0, s.historyN); c.historyN = s.historyN;
-        System.arraycopy(s.eye, 0, c.eye, 0, s.eye.length); c.eyeN = s.eyeN;
+        System.arraycopy(s.eye, 0, c.eye, 0, s.eye.length); c.eyeN = s.eyeN; c.free = s.free;
         return c;
     }
 }

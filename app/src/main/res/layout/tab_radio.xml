@@ -12,6 +12,16 @@
         <TextView style="@style/Note" android:text="Tap the upper or lower half of a digit, drag over it, or long-press the frequency to type it." />
     </LinearLayout>
 
+    <TextView style="@style/Head" android:text="Repeater" />
+    <LinearLayout style="@style/Group">
+        <Spinner android:id="@+id/shift" style="@style/Spin" />
+        <LinearLayout style="@style/Row">
+            <TextView android:id="@+id/offsetValue" style="@style/KeyText" android:textSize="16sp" android:textStyle="bold" />
+            <Button android:id="@+id/offsetEdit" style="@style/Small" android:text="Edit" />
+        </LinearLayout>
+        <TextView style="@style/Note" android:text="Transmit on the receive frequency moved by the offset. Memories keep their own shift; this one is for VFO." />
+    </LinearLayout>
+
     <TextView style="@style/Head" android:text="Frequency correction" />
     <LinearLayout style="@style/Group">
         <LinearLayout style="@style/Row">

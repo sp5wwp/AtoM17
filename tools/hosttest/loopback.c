@@ -53,7 +53,7 @@ static float* modulate(const int8_t* sym, int n, int* out_n, float dev_outer, fl
     return o;
 }
 
-typedef struct { int starts, ends, sig_state, packets; char src[12], dst[12], text[64], sms[900]; int dec; int frames; int audio; float dev; int enc; } result_t;
+typedef struct { int starts, ends, sig_state, packets; char src[12], dst[12], text[64], sms[900]; int dec; int frames; int audio; float dev; int enc; int pkt_meta, pkt_pos; double lat, lon; } result_t;
 
 static int use_agc;
 static result_t run(m17rx_t* rx, const int8_t* sym, int n, float noise, float scale)
@@ -76,7 +76,8 @@ static result_t run(m17rx_t* rx, const int8_t* sym, int n, float noise, float sc
             if (ev.kind == M17RX_EV_STREAM_START) { r.starts++; strcpy(r.src, ev.link.src); strcpy(r.dst, ev.link.dst); r.enc = ev.link.enc_type; r.dec = ev.link.decrypt; }
             if (ev.kind == M17RX_EV_LINK_UPDATE && ev.link.meta_text_complete) strcpy(r.text, ev.link.meta_text);
             if (ev.kind == M17RX_EV_STREAM_END) { r.ends++; r.sig_state = ev.sig_state; r.frames = ev.frames; strcpy(r.text[0] ? r.text : r.text, r.text); if (ev.link.meta_text[0]) strcpy(r.text, ev.link.meta_text); }
-            if (ev.kind == M17RX_EV_PACKET) { r.packets++; strcpy(r.src, ev.link.src); strcpy(r.dst, ev.link.dst); strcpy(r.sms, ev.sms); }
+            if (ev.kind == M17RX_EV_PACKET) { r.packets++; strcpy(r.src, ev.link.src); strcpy(r.dst, ev.link.dst); strcpy(r.sms, ev.sms);
+                                              r.pkt_meta = ev.link.meta_kind; r.pkt_pos = ev.link.gnss_valid_pos; r.lat = ev.link.gnss_lat; r.lon = ev.link.gnss_lon; }
         }
         m17rx_status_t st; m17rx_get_status(rx, &st); if (st.meas_valid) r.dev = st.deviation_hz;
     }
@@ -182,6 +183,21 @@ int main(void)
     int k = m17tx_sms(tx, "Hello from AtoM17 on the Atom XL", 32, symbuf);
     r = run(rx, symbuf, k, 0, 1.0f);
     CHECK(r.packets == 1 && !strcmp(r.sms, "Hello from AtoM17 on the Atom XL"), "sms: '%s'", r.sms);
+    CHECK(r.pkt_meta == M17RX_META_NONE, "sms: no META without a position (meta kind %d)", r.pkt_meta);
+
+    /* 4b. SMS with a position in the packet's LSF META (out of spec, common) */
+    {
+        m17tx_config_t g = c;
+        g.meta_kind = M17TX_META_GNSS; g.gnss_source = 0; g.gnss_station = 1;
+        g.lat = 52.22970f; g.lon = 21.01220f; g.alt_m = 112; g.gnss_validity = 1 << 3 | 1 << 2;
+        CHECK(m17tx_configure(tx, &g) == 0, "configure gnss");
+        m17rx_reset(rx);
+        k = m17tx_sms(tx, "pos", 3, symbuf);
+        r = run(rx, symbuf, k, 0, 1.0f);
+        CHECK(r.packets == 1 && !strcmp(r.sms, "pos") && r.pkt_meta == M17RX_META_GNSS && r.pkt_pos
+              && fabs(r.lat - 52.2297) < 1e-3 && fabs(r.lon - 21.0122) < 1e-3, "sms+pos: '%s' meta %d valid %d %.5f %.5f", r.sms, r.pkt_meta, r.pkt_pos, r.lat, r.lon);
+        CHECK(m17tx_configure(tx, &c) == 0, "configure back");
+    }
 
     /* 5. AES-256 */
     m17rx_reset(rx);

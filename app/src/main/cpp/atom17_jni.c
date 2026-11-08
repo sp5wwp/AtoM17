@@ -13,6 +13,8 @@
 #include "m17.h"
 #include "m17agc.h"
 #include "m17resynth.h"
+#include "codec2_mod.h"
+#include "c2fargan.h"
 
 #define JF(name) Java_org_m17project_atomxl_M17Native_##name
 
@@ -129,6 +131,36 @@ JNIEXPORT jint JNICALL JF(rxAudioRate)(JNIEnv* env, jclass c, jlong p)
 {
     rxh_t* h = (rxh_t*)(intptr_t)p;
     return h ? m17rx_audio_rate(h->rx) : 8000;
+}
+
+/* Voice check: 8 kHz speech through Codec2 3200 and back, the way another station hears it. With {@code neural}
+   the frames are synthesised by FARGAN (16 kHz out, twice the samples). Returns the decoded audio. */
+JNIEXPORT jshortArray JNICALL JF(c2Loopback)(JNIEnv* env, jclass c, jshortArray in, jboolean neural)
+{
+    jsize n = (*env)->GetArrayLength(env, in), frames = n / 160;
+    int up = neural ? 2 : 1;
+    jshortArray outA = (*env)->NewShortArray(env, frames * 160 * up);
+    if (!outA || frames == 0) return outA;
+    int16_t* pcm = (int16_t*)malloc((size_t)n * sizeof(int16_t));
+    int16_t* out = (int16_t*)malloc((size_t)frames * 160 * up * sizeof(int16_t));
+    codec2_encoder_t* enc = (codec2_encoder_t*)calloc(1, sizeof(codec2_encoder_t));
+    codec2_decoder_t* dec = (codec2_decoder_t*)calloc(1, sizeof(codec2_decoder_t));
+    c2f_decoder* nn = neural ? c2f_create() : NULL;
+    if (pcm && out && enc && dec && (!neural || nn)) {
+        (*env)->GetShortArrayRegion(env, in, 0, n, pcm);
+        codec2_encoder_init(enc);
+        codec2_decoder_init(dec);
+        for (int f = 0; f < frames; f++) {
+            uint8_t bits[8];
+            codec2_encode(enc, bits, &pcm[f * 160]);
+            if (nn) c2f_decode(nn, &out[f * 320], bits);
+            else codec2_decode(dec, &out[f * 160], bits);
+        }
+        (*env)->SetShortArrayRegion(env, outA, 0, frames * 160 * up, out);
+    }
+    if (nn) c2f_destroy(nn);
+    free(pcm); free(out); free(enc); free(dec);
+    return outA;
 }
 
 static void jesc(char* out, size_t cap, const char* in)
