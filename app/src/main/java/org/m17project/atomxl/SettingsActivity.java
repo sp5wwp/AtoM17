@@ -69,6 +69,11 @@ public final class SettingsActivity extends Activity {
                 new Row("Tuning, FM and power", "Step " + step(cfg.step()) + String.format(Locale.US, " · %.1f ppm", cfg.ppm()) + " · squelch " + (cfg.squelch() == 0 ? "open" : String.valueOf(cfg.squelch()))
                         + "\nCTCSS " + tone(cfg.rxTone()) + " / " + tone(cfg.txTone()) + " · " + (cfg.wide() ? "25" : "12.5") + " kHz · " + (cfg.high() ? "high" : "low") + " power", page("radio", "Tuning, FM and power")));
 
+        group("Messages",
+                new Row("Message notifications", MsgNotify.WHICH[Math.max(0, Math.min(3, cfg.p.getInt("msgNotify", 2)))]
+                        + (cfg.p.getInt("msgNotify", 2) == 0 ? "" : "\n" + MsgNotify.soundName(this, cfg) + " · " + MsgNotify.VIBRATIONS[MsgNotify.vibration(cfg)].toLowerCase(Locale.US)),
+                        page("msgs", "Message notifications")));
+
         String tag = st.moduleTag();
         group("Device",
                 new Row("PTT key", (st.pttKey.learned() ? "Learned: " + st.pttKey.code() : "Not learned") + (cfg.p.getBoolean("softPtt", false) ? " · on-screen PTT on" : ""), page("ptt", "PTT key")),

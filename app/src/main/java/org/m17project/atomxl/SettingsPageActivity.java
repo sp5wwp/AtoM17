@@ -7,6 +7,7 @@ package org.m17project.atomxl;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
@@ -23,7 +24,7 @@ import java.util.Locale;
 public final class SettingsPageActivity extends Activity implements Station.Listener {
     static final int[] STEPS = { 100, 1_000, 5_000, 6_250, 10_000, 12_500, 25_000, 100_000, 1_000_000 };
     private static final int[] M17_GROUPS = { R.id.grpStation, R.id.grpMeta, R.id.grpEnc, R.id.grpSign, R.id.grpRxKeys, R.id.grpRx };
-    private static final int[] DEVICE_GROUPS = { R.id.grpPtt, R.id.grpBench, R.id.grpAbout };
+    private static final int[] DEVICE_GROUPS = { R.id.grpPtt, R.id.grpBench, R.id.grpMsgs, R.id.grpAbout };
 
     private Station st;
     private Config cfg;
@@ -65,7 +66,7 @@ public final class SettingsPageActivity extends Activity implements Station.List
                 break;
             default: {
                 getLayoutInflater().inflate(R.layout.tab_device, body, true);
-                only(DEVICE_GROUPS, new int[] { page.equals("ptt") ? R.id.grpPtt : page.equals("bench") ? R.id.grpBench : R.id.grpAbout });
+                only(DEVICE_GROUPS, new int[] { page.equals("ptt") ? R.id.grpPtt : page.equals("bench") ? R.id.grpBench : page.equals("msgs") ? R.id.grpMsgs : R.id.grpAbout });
                 bindDevice();
                 if (page.equals("bench")) buildSignal();
             }
@@ -212,11 +213,42 @@ public final class SettingsPageActivity extends Activity implements Station.List
             Toast.makeText(this, why != null ? why : "Recording 30 s: transmit to the Atom now", Toast.LENGTH_LONG).show();
             onState();
         });
+        M17Tab.spinner(this, R.id.msgNotify, MsgNotify.WHICH, Math.max(0, Math.min(3, cfg.p.getInt("msgNotify", 2))), v -> cfg.edit().putInt("msgNotify", v).apply());
+        showSoundName();
+        findViewById(R.id.msgSound).setOnClickListener(v -> {
+            android.net.Uri cur = MsgNotify.sound(cfg);
+            Intent i = new Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE, android.media.RingtoneManager.TYPE_NOTIFICATION)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TITLE, "M17 message sound")
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                    .putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, cur);
+            try { startActivityForResult(i, 7); } catch (Exception e) { Toast.makeText(this, "No ringtone picker", Toast.LENGTH_SHORT).show(); }
+        });
+        M17Tab.spinner(this, R.id.msgVibrate, MsgNotify.VIBRATIONS, MsgNotify.vibration(cfg), v -> cfg.edit().putInt("msgVibrate", v).apply());
+        findViewById(R.id.msgTest).setOnClickListener(v -> {
+            int keep = cfg.p.getInt("msgNotify", 2);
+            if (keep == 0) { Toast.makeText(this, "Notifications are off", Toast.LENGTH_SHORT).show(); return; }
+            MsgNotify.post(this, cfg, "TEST", cfg.src().isEmpty() ? "@ALL" : cfg.src(), "This is how a received M17 SMS is announced.");
+        });
         ((TextView) findViewById(R.id.about)).setText("AtoM17 " + BuildConfig.VERSION_NAME + " – FM and M17 for the Unihertz Atom XL. GPL-3.0-or-later.\n\n"
                 + "Wojciech Kaczmarski, SP5WWP, M17 Foundation.\n\n"
                 + "Based on SignalDeck © 2026 IIMacGyverII (GPL-3.0-or-later): bridge protocol, power sequences, the V076J symbol engine, "
                 + "the firmware loader and the M17 receive equaliser.\n\nM17: libm17, Codec2-mod, Codec2-mod-neural (LGPL-2.1, with the FARGAN runtime from Opus, BSD-3-Clause), "
                 + "libm17rx (M17 Project), micro-ecc, tinier-aes. Voice AGC from DroidStar (Doug McLain, GPL-3.0-or-later).\n\n" + M17Native.version());
+    }
+
+    private void showSoundName() {
+        TextView t = findViewById(R.id.msgSoundName);
+        if (t != null) t.setText(MsgNotify.soundName(this, cfg));
+    }
+
+    @Override protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req != 7 || res != RESULT_OK || data == null) return;
+        android.net.Uri u = data.getParcelableExtra(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
+        cfg.edit().putString("msgSound", u == null ? "" : u.toString()).apply();      // null from the picker = Silent
+        showSoundName();
     }
 
     private void showPttInfo() {

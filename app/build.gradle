@@ -11,8 +11,8 @@ android {
         applicationId 'org.m17project.atomxl'
         minSdk 29
         targetSdk 30          // the Atom XL runs Android 11
-        versionCode 15
-        versionName '0.3.4'
+        versionCode 16
+        versionName '0.3.5'
         ndk { abiFilters 'arm64-v8a', 'armeabi-v7a' }
         externalNativeBuild { cmake { arguments "-DSDALSA_ASSET_DIR=${sdalsaAssets.absolutePath.replace(File.separator, '/')}" } }
     }

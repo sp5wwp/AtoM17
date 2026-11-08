@@ -379,7 +379,7 @@ final class Station implements Radio.Events, Audio.Sink {
                 r.protocol = e.getInt("protocol"); r.ended = true;
                 r.kind = r.protocol == 5 ? "sms" : "packet";
                 r.sms = r.protocol == 5 ? e.getString("sms") : "protocol 0x" + Integer.toHexString(r.protocol) + ", " + e.getInt("length") + " bytes: " + e.getString("data");
-                if (r.protocol == 5) inbox.add(true, r.src, r.dst, r.sms);
+                if (r.protocol == 5) { inbox.add(true, r.src, r.dst, r.sms); MsgNotify.post(ctx, cfg, r.src, r.dst, r.sms); }
                 log("M17 packet " + r.src + " > " + r.dst + ": " + r.sms);
             } else if (kind == M17Native.EV_PACKET_BAD) { r.kind = "bad"; r.ended = true; r.sms = "packet with a bad CRC"; }
             final RxEntry fr = r;

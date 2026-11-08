@@ -108,7 +108,8 @@ public final class MainActivity extends Activity implements Station.Listener {
 
         m17tab = new M17Tab(this, st);
         buildLive();
-        showTab(cfg.p.getInt("tab", 0));
+        showTab(getIntent().getIntExtra("tab", cfg.p.getInt("tab", 0)));
+        MsgNotify.channel(this);
 
         txBar.setOnClickListener(v -> {
             if (!cfg.p.getBoolean("softPtt", false)) return;
@@ -118,6 +119,12 @@ public final class MainActivity extends Activity implements Station.Listener {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
                 || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO, Manifest.permission.ACCESS_FINE_LOCATION }, 1);
+    }
+
+    /** A message notification was tapped while the screen was already open. */
+    @Override protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        if (i.hasExtra("tab")) showTab(i.getIntExtra("tab", 0));
     }
 
     @Override protected void onResume() {
@@ -145,7 +152,7 @@ public final class MainActivity extends Activity implements Station.Listener {
             label.setTextColor(i == tab ? Ui.WHITE : Ui.TEXT3);
         }
         cfg.edit().putInt("tab", tab).apply();
-        if (tab == 2) { rebuildInbox(); st.inbox.markRead(); showBadge(); }
+        if (tab == 2) { rebuildInbox(); st.inbox.markRead(); showBadge(); MsgNotify.clear(this); }
     }
 
     private void setMode(boolean m17) { cfg.edit().putBoolean("m17", m17).apply(); st.applyChannel(); onState(); }
@@ -513,10 +520,10 @@ public final class MainActivity extends Activity implements Station.Listener {
 
     @Override public void onRx(Station.RxEntry e) {
         rebuildHeard();
-        if (tab == 2) { rebuildInbox(); st.inbox.markRead(); }
+        if (tab == 2 && hasWindowFocus()) { rebuildInbox(); st.inbox.markRead(); MsgNotify.clear(this); }
         showBadge();
         updateLive();
-        if ("sms".equals(e.kind) && e.at > shownSmsAt && tab != 2) {
+        if ("sms".equals(e.kind) && e.at > shownSmsAt && tab != 2 && hasWindowFocus()) {
             shownSmsAt = e.at;
             new AlertDialog.Builder(this).setTitle("SMS from " + (e.src.isEmpty() ? "?" : e.src))
                     .setMessage(e.sms + "\n\nto " + e.dst + " · " + new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date(e.at)))
