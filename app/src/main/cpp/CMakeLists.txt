@@ -22,8 +22,12 @@ target_include_directories(atom17 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CU
 target_compile_definitions(atom17 PRIVATE M17RX_BUILD=1 SUPPRESS_PERF_WARNINGS)
 # FARGAN's inner loops: the NN sources get -O3 (NEON on arm64 and armeabi-v7a comes from the NDK defaults)
 set_source_files_properties(${NN_SRC} PROPERTIES COMPILE_OPTIONS "-O3")
-target_compile_options(atom17 PRIVATE -O2 -w)
-target_link_libraries(atom17 m log)
+target_compile_options(atom17 PRIVATE -O2)
+# warnings for AtoM17's own code, none for the vendored libraries
+set_property(SOURCE atom17_jni.c m17tx.c ${M17RX_SRC} APPEND PROPERTY COMPILE_OPTIONS -Wall -Wextra)
+set_property(SOURCE atom17_jni.c APPEND PROPERTY COMPILE_OPTIONS -Wno-unused-parameter)   # JNI: env and jclass
+set_property(SOURCE ${LIBM17_SRC} ${CODEC2_SRC} ${T}/micro-ecc/uECC.c ${NN_SRC} APPEND PROPERTY COMPILE_OPTIONS -w)
+target_link_libraries(atom17 m)
 
 add_executable(sdalsa sdalsa/sdalsa.c)
 target_compile_options(sdalsa PRIVATE -O2 -Wall -Wextra)

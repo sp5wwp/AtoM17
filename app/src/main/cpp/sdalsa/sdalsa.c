@@ -195,7 +195,14 @@ static int capture_loop(int pcm, unsigned ch, unsigned period, int drop) {
         struct snd_xferi x; memset(&x, 0, sizeof x); x.buf = buf; x.frames = period;
         if (ioctl(pcm, SNDRV_PCM_IOCTL_READI_FRAMES, &x) < 0) {
             if (errno == EINTR) continue;
-            if (errno == EPIPE) { overruns++; if (ioctl(pcm, SNDRV_PCM_IOCTL_PREPARE) < 0 || ioctl(pcm, SNDRV_PCM_IOCTL_START) < 0) break; continue; }
+            if (errno == EPIPE) {
+                overruns++;
+                if (ioctl(pcm, SNDRV_PCM_IOCTL_PREPARE) < 0 || ioctl(pcm, SNDRV_PCM_IOCTL_START) < 0) {
+                    /* exit 4, not 0: the caller must see a dead capture, not a clean stop */
+                    fprintf(stderr, "sdalsa: restart after overrun %lu: %s\n", overruns, strerror(errno)); free(buf); return 4;
+                }
+                continue;
+            }
             int e = errno;
             fprintf(stderr, "sdalsa: read: %s after %ld ms without a period (after %lu overruns, %lu periods dropped)\n", strerror(e), now_ms() - last, overruns, dropped); free(buf); return 4;
         }
@@ -243,7 +250,12 @@ out:
     free(buf); return rc;
 }
 
-static int usage(void) { fprintf(stderr, "usage: sdalsa list [card] | ctl [-c card] NAME=VALUE... | cap|play [-c card] -d dev [-r rate] [-n ch] [-p period] [-k periods] [NAME=VALUE...] [-- NAME=VALUE...]\n"); return 2; }
+static int usage(void) {
+    fprintf(stderr, "usage: sdalsa list [card] | ctl [-c card] NAME=VALUE... |\n"
+                    "       cap [-c card] -d dev [-r rate] [-n ch] [-p period] [-k periods] [-q 1] [NAME=VALUE...] [-- NAME=VALUE...] |\n"
+                    "       play [-c card] -d dev [-r rate] [-n ch] [-p period] [-k periods] [-q 1] [-s keep_ms] [NAME=VALUE...] [-- NAME=VALUE...]\n");
+    return 2;
+}
 
 int main(int argc, char **argv) {
     if (argc < 2) return usage();
