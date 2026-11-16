@@ -4,84 +4,84 @@
     android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
 
     <LinearLayout android:id="@+id/grpPtt" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-        <TextView style="@style/Head" android:text="Hardware key" />
+        <TextView style="@style/Head" android:text="@string/tab_device_hardware_key" />
         <LinearLayout style="@style/Group">
             <TextView android:id="@+id/pttInfo" style="@style/Note" android:textSize="14sp" android:textColor="@color/white" />
             <LinearLayout style="@style/Row">
-                <Button android:id="@+id/pttLearn" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Learn PTT key" />
-                <Button android:id="@+id/pttForget" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Forget" />
+                <Button android:id="@+id/pttLearn" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="@string/tab_device_pttlearn" />
+                <Button android:id="@+id/pttForget" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="@string/tab_device_pttforget" />
             </LinearLayout>
-            <TextView style="@style/Note" android:text="The system still acts on the key too (e.g. the flashlight): reassign it under Settings › Intelligent assistance." />
+            <TextView style="@style/Note" android:text="@string/tab_device_the_system_still_acts_on" />
         </LinearLayout>
-        <TextView style="@style/Head" android:text="On screen" />
+        <TextView style="@style/Head" android:text="@string/tab_device_on_screen" />
         <LinearLayout style="@style/Group">
-            <CheckBox android:id="@+id/softPtt" style="@style/Check" android:text="On-screen PTT (tap the bottom bar to start and stop)" />
+            <CheckBox android:id="@+id/softPtt" style="@style/Check" android:text="@string/tab_device_softptt" />
         </LinearLayout>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/grpBench" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-        <TextView style="@style/Head" android:text="Receive signal (M17)" />
+        <TextView style="@style/Head" android:text="@string/tab_device_receive_signal_m17" />
         <LinearLayout android:id="@+id/signalBox" style="@style/Group" />
-        <TextView style="@style/Note" android:text="Measured on the equaliser, from the radio's audio: libm17rx decodes a re-synthesised signal, so its own EVM, deviation and offset would describe that instead. The Atom's audio path removes DC, so the carrier offset cannot be measured here." />
-        <TextView style="@style/Head" android:text="Microphone gain and voice check" />
+        <TextView style="@style/Note" android:text="@string/tab_device_measured_on_the_equaliser_from" />
+        <TextView style="@style/Head" android:text="@string/tab_device_microphone_gain_and_voice_check" />
         <LinearLayout style="@style/Group">
             <Spinner android:id="@+id/micGain" style="@style/Spin" />
-            <Button android:id="@+id/voiceRec" style="@style/Big" android:text="Record 5 s, then play back" />
-            <Button android:id="@+id/voicePlay" style="@style/Big" android:text="Play again" />
-            <CheckBox android:id="@+id/voiceCodec" style="@style/Check" android:checked="true" android:text="Through Codec2 3200 (as others hear it)" />
+            <Button android:id="@+id/voiceRec" style="@style/Big" android:text="@string/tab_device_voicerec" />
+            <Button android:id="@+id/voicePlay" style="@style/Big" android:text="@string/tab_device_voiceplay" />
+            <CheckBox android:id="@+id/voiceCodec" style="@style/Check" android:checked="true" android:text="@string/tab_device_voicecodec" />
             <TextView android:id="@+id/voiceInfo" style="@style/Note" />
-            <TextView style="@style/Note" android:text="The microphone gain applies to M17 and FM transmit. Speak as you would into the radio; aim for peaks around −12 dBFS." />
+            <TextView style="@style/Note" android:text="@string/tab_device_the_microphone_gain_applies_to" />
         </LinearLayout>
 
-        <TextView style="@style/Head" android:text="Transmit test" />
+        <TextView style="@style/Head" android:text="@string/tab_device_transmit_test" />
         <LinearLayout style="@style/Group">
-            <Button android:id="@+id/testTx" style="@style/Big" android:text="M17 test: 10 s of a 1 kHz tone" />
-            <TextView style="@style/Note" android:text="Keys the transmitter without the microphone or the PTT key: use a dummy load or a frequency you may use." />
+            <Button android:id="@+id/testTx" style="@style/Big" android:text="@string/tab_device_testtx" />
+            <TextView style="@style/Note" android:text="@string/tab_device_keys_the_transmitter_without_the" />
         </LinearLayout>
-        <TextView style="@style/Head" android:text="Receive recording" />
+        <TextView style="@style/Head" android:text="@string/tab_device_receive_recording" />
         <LinearLayout style="@style/Group">
-            <Button android:id="@+id/record" style="@style/Big" android:text="Record M17 receive audio (30 s)" />
-            <TextView style="@style/Note" android:text="Saves what the M17 decoder hears (8 kHz WAV) to Download/AtoM17, for checking a station that does not decode." />
+            <Button android:id="@+id/record" style="@style/Big" android:text="@string/tab_device_record" />
+            <TextView style="@style/Note" android:text="@string/tab_device_saves_what_the_m17_decoder" />
         </LinearLayout>
-        <TextView style="@style/Head" android:text="Receive processing" />
+        <TextView style="@style/Head" android:text="@string/tab_device_receive_processing" />
         <LinearLayout style="@style/Group">
             <TextView android:id="@+id/dspLoad" style="@style/Note" android:textSize="14sp" android:textColor="@color/white" />
-            <TextView style="@style/Note" android:text="Equaliser, decoder and audio, as a share of one CPU core, over the last 5 s (M17 mode). The log records it every 5 minutes." />
+            <TextView style="@style/Note" android:text="@string/tab_device_equaliser_decoder_and_audio_as" />
         </LinearLayout>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/grpMsgs" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-        <TextView style="@style/Head" android:text="Notify for" />
+        <TextView style="@style/Head" android:text="@string/tab_device_notify_for" />
         <LinearLayout style="@style/Group">
             <Spinner android:id="@+id/msgNotify" style="@style/Spin" />
-            <TextView style="@style/Note" android:text="Received SMS post a notification with a Reply button. The Inbox tab keeps every message either way." />
+            <TextView style="@style/Note" android:text="@string/tab_device_received_sms_post_a_notification" />
         </LinearLayout>
-        <TextView style="@style/Head" android:text="Sound" />
+        <TextView style="@style/Head" android:text="@string/tab_device_sound" />
         <LinearLayout style="@style/Group">
             <LinearLayout style="@style/Row">
                 <TextView android:id="@+id/msgSoundName" style="@style/KeyText" android:fontFamily="sans-serif" android:textSize="15sp" android:textStyle="bold" />
-                <Button android:id="@+id/msgSound" style="@style/Small" android:text="Choose…" />
+                <Button android:id="@+id/msgSound" style="@style/Small" android:text="@string/tab_device_msgsound" />
             </LinearLayout>
         </LinearLayout>
-        <TextView style="@style/Head" android:text="Vibration" />
+        <TextView style="@style/Head" android:text="@string/tab_device_vibration" />
         <LinearLayout style="@style/Group">
             <Spinner android:id="@+id/msgVibrate" style="@style/Spin" />
-            <TextView style="@style/Note" android:text="The phone's ringer mode applies: silent plays nothing, vibrate only vibrates, and do-not-disturb holds both." />
+            <TextView style="@style/Note" android:text="@string/tab_device_the_phone_s_ringer_mode" />
         </LinearLayout>
-        <Button android:id="@+id/msgTest" style="@style/Big" android:layout_marginTop="12dp" android:text="Test notification" />
+        <Button android:id="@+id/msgTest" style="@style/Big" android:layout_marginTop="12dp" android:text="@string/tab_device_msgtest" />
     </LinearLayout>
 
     <LinearLayout android:id="@+id/grpScreen" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-        <TextView style="@style/Head" android:text="Screen" />
+        <TextView style="@style/Head" android:text="@string/tab_device_screen" />
         <LinearLayout style="@style/Group">
             <Spinner android:id="@+id/screenOn" style="@style/Spin" />
             <Spinner android:id="@+id/wakeFor" style="@style/Spin" />
-            <TextView style="@style/Note" android:text="While active: kept on during a transmission, a received stream or an open FM squelch, and 10 s after; otherwise the phone's own screen timeout applies. Waking lights the screen for 5 s." />
+            <TextView style="@style/Note" android:text="@string/tab_device_while_active_kept_on_during" />
         </LinearLayout>
     </LinearLayout>
 
     <LinearLayout android:id="@+id/grpAbout" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-        <TextView style="@style/Head" android:text="AtoM17" />
+        <TextView style="@style/Head" android:text="@string/tab_device_atom17" />
         <LinearLayout style="@style/Group">
             <TextView android:id="@+id/about" style="@style/Note" android:textSize="13sp" android:textIsSelectable="true" />
         </LinearLayout>

@@ -231,7 +231,6 @@ public final class MainActivity extends Activity implements Station.Listener {
 
     private void memStep(int d) { mem.apply(st, mem.index() + d); freq.setHz(cfg.freq()); onState(); }
 
-    private void pickMemory() { startActivity(new Intent(this, MemoriesActivity.class)); }
 
     /** Store the current channel as a new memory, asking for its name. */
     private void storeMemory(Runnable then) {

@@ -3,53 +3,53 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
 
-    <TextView style="@style/Head" android:text="Tuning" />
+    <TextView style="@style/Head" android:text="@string/tab_radio_tuning" />
     <LinearLayout style="@style/Group">
         <LinearLayout style="@style/Row">
-            <TextView style="@style/Label" android:text="Step" />
+            <TextView style="@style/Label" android:text="@string/tab_radio_step" />
             <Spinner android:id="@+id/step" style="@style/Spin" android:layout_width="0dp" android:layout_weight="1" />
         </LinearLayout>
-        <TextView style="@style/Note" android:text="Tap the upper or lower half of a digit, drag over it, or long-press the frequency to type it." />
+        <TextView style="@style/Note" android:text="@string/tab_radio_tap_the_upper_or_lower" />
     </LinearLayout>
 
-    <TextView style="@style/Head" android:text="Repeater" />
+    <TextView style="@style/Head" android:text="@string/tab_radio_repeater" />
     <LinearLayout style="@style/Group">
         <Spinner android:id="@+id/shift" style="@style/Spin" />
         <LinearLayout style="@style/Row">
             <TextView android:id="@+id/offsetValue" style="@style/KeyText" android:textSize="16sp" android:textStyle="bold" />
-            <Button android:id="@+id/offsetEdit" style="@style/Small" android:text="Edit" />
+            <Button android:id="@+id/offsetEdit" style="@style/Small" android:text="@string/tab_m17_metatextedit" />
         </LinearLayout>
-        <TextView style="@style/Note" android:text="Transmit on the receive frequency moved by the offset. Memories keep their own shift; this one is for VFO." />
+        <TextView style="@style/Note" android:text="@string/tab_radio_transmit_on_the_receive_frequency" />
     </LinearLayout>
 
-    <TextView style="@style/Head" android:text="Frequency correction" />
+    <TextView style="@style/Head" android:text="@string/tab_radio_frequency_correction" />
     <LinearLayout style="@style/Group">
         <LinearLayout style="@style/Row">
             <TextView android:id="@+id/ppmValue" style="@style/KeyText" android:textSize="16sp" android:textStyle="bold" />
-            <Button android:id="@+id/ppmEdit" style="@style/Small" android:text="Edit" />
+            <Button android:id="@+id/ppmEdit" style="@style/Small" android:text="@string/tab_m17_metatextedit" />
         </LinearLayout>
-        <TextView style="@style/Note" android:text="The radio's reference error, measured against a known signal: + when it lands high. The frequency sent to the module is corrected; the display keeps the nominal one." />
+        <TextView style="@style/Note" android:text="@string/tab_radio_the_radio_s_reference_error" />
     </LinearLayout>
 
-    <TextView style="@style/Head" android:text="FM" />
+    <TextView style="@style/Head" android:text="@string/main_modefm" />
     <LinearLayout style="@style/Group">
         <LinearLayout style="@style/Row">
-            <TextView style="@style/Label" android:text="Squelch" />
+            <TextView style="@style/Label" android:text="@string/tab_radio_squelch" />
             <Spinner android:id="@+id/sq" style="@style/Spin" android:layout_width="0dp" android:layout_weight="1" />
         </LinearLayout>
         <LinearLayout style="@style/Row">
-            <TextView style="@style/Label" android:text="RX CTCSS" />
+            <TextView style="@style/Label" android:text="@string/tab_radio_rx_ctcss" />
             <Spinner android:id="@+id/rxTone" style="@style/Spin" android:layout_width="0dp" android:layout_weight="1" />
         </LinearLayout>
         <LinearLayout style="@style/Row">
-            <TextView style="@style/Label" android:text="TX CTCSS" />
+            <TextView style="@style/Label" android:text="@string/tab_radio_tx_ctcss" />
             <Spinner android:id="@+id/txTone" style="@style/Spin" android:layout_width="0dp" android:layout_weight="1" />
         </LinearLayout>
-        <CheckBox android:id="@+id/wide" style="@style/Check" android:text="25 kHz channel" />
+        <CheckBox android:id="@+id/wide" style="@style/Check" android:text="@string/tab_radio_wide" />
     </LinearLayout>
 
-    <TextView style="@style/Head" android:text="Transmitter" />
+    <TextView style="@style/Head" android:text="@string/tab_radio_transmitter" />
     <LinearLayout style="@style/Group">
-        <CheckBox android:id="@+id/high" style="@style/Check" android:text="High power" />
+        <CheckBox android:id="@+id/high" style="@style/Check" android:text="@string/tab_radio_high" />
     </LinearLayout>
 </LinearLayout>

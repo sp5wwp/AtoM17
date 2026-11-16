@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The palette. Ui.java holds the same values for views built in code: change both together.
      Text colours reach 4.5:1 on a card over the lightest part of the background (bg_bottom). -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="UnusedResources">
     <color name="bg_top">#132B41</color>
     <color name="bg_mid">#1A3B57</color>
     <color name="bg_bottom">#1F4A68</color>
