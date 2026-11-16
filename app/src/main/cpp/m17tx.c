@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/random.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -42,8 +43,17 @@ struct m17tx
     codec2_encoder_t c2;
 };
 
+/* random bytes for the AES nonce and the signing keys: getrandom(), else /dev/urandom. 1 on success, 0 if neither works */
 static int urandom(uint8_t* dest, unsigned size)
 {
+    unsigned have = 0;
+    while (have < size)
+    {
+        ssize_t r = getrandom(dest + have, size - have, 0);
+        if (r <= 0) break;
+        have += (unsigned)r;
+    }
+    if (have == size) return 1;
     int fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
     if (fd < 0) return 0;
     unsigned got = 0;
@@ -155,8 +165,9 @@ int m17tx_configure(m17tx_t* tx, const m17tx_config_t* cfg)
     return 0;
 }
 
-/* the transmission's LSF copy; AES gets a fresh nonce (timestamp since 2020 + 80 random bits) */
-static void latch_lsf(m17tx_t* tx, int start)
+/* the transmission's LSF copy. AES gets a fresh nonce (timestamp since 2020 + 80 random bits), -1 when there are no
+   random bits: a fixed pattern would repeat the AES-CTR keystream of another transmission in the same second */
+static int latch_lsf(m17tx_t* tx, int start)
 {
     int aes = tx->cfg.enc == M17TX_ENC_AES;
     if (start)
@@ -165,15 +176,16 @@ static void latch_lsf(m17tx_t* tx, int start)
         if (aes)
         {
             uint8_t rnd[10];
-            if (!urandom(rnd, sizeof(rnd))) memset(rnd, 0x5A, sizeof(rnd));
+            if (!urandom(rnd, sizeof(rnd))) return -1;
             set_LSF_meta_nonce(&tx->lsf_tx, time(NULL), rnd);
         }
     }
     else if (aes)
-        return;                                        /* the nonce stays for the whole transmission */
+        return 0;                                      /* the nonce stays for the whole transmission */
     if (!aes && tx->meta_blocks > 1)
         memcpy(tx->lsf_tx.meta, tx->meta_block[tx->meta_idx], 14);
     update_LSF_CRC(&tx->lsf_tx);
+    return 0;
 }
 
 static void scrambler_bytes(m17tx_t* tx, uint8_t out[PAYLOAD_BYTES])
@@ -229,8 +241,8 @@ int m17tx_stream_begin(m17tx_t* tx, int8_t* out)
     memset(tx->digest, 0, sizeof(tx->digest));
     tx->scram_state = tx->cfg.scram_seed;
     codec2_encoder_init(&tx->c2);
+    if (latch_lsf(tx, 1) < 0) return -1;
     gen_preamble_i8(out, &n, PREAM_LSF);
-    latch_lsf(tx, 1);
     gen_frame_i8(out + n, NULL, FRAME_LSF, &tx->lsf_tx, 0, 0);
     n += SYM_PER_FRA;
     if (tx->meta_blocks > 1 && tx->cfg.enc != M17TX_ENC_AES) { tx->meta_idx = 1; latch_lsf(tx, 0); }

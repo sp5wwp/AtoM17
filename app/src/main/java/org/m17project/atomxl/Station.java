@@ -850,7 +850,9 @@ final class Station implements Radio.Events, Audio.Sink {
             if (rec == null && testTone == null) { log("no microphone (permission?)"); return; }
             byte[] b = new byte[6 * 48];
             s.leadIn(cfg.leadInMs());
-            s.add(b, M17Native.txBegin(txh, b));
+            int begin = M17Native.txBegin(txh, b);
+            if (begin < 0) { log("M17: the stream did not start (" + begin + "), with AES: no random numbers for the nonce"); return; }
+            s.add(b, begin);
             if (!s.flush(false)) return;
             short[] pcm = new short[320];
             long t0 = System.currentTimeMillis(), lastStat = t0;

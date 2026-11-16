@@ -55,7 +55,7 @@ void     m17tx_destroy(m17tx_t* tx);
 /* returns 0, or a negative number when the configuration cannot be used (bad callsign, key size, private key) */
 int      m17tx_configure(m17tx_t* tx, const m17tx_config_t* cfg);
 
-/* Stream: preamble + LSF (384 symbols). Returns the symbol count. */
+/* Stream: preamble + LSF (384 symbols). Returns the symbol count, or -1 when AES has no random bits for its nonce. */
 int      m17tx_stream_begin(m17tx_t* tx, int8_t* out);
 /* One 40 ms stream frame from 320 samples of 8 kHz mono PCM (two Codec2 3200 frames). Returns 192. */
 int      m17tx_stream_voice(m17tx_t* tx, const int16_t pcm[320], int8_t* out);
