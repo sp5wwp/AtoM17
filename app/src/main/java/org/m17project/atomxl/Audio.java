@@ -28,8 +28,9 @@ final class Audio {
     private final Radio.Events log;
     private volatile Sink sink;
 
-    private Process cap; private Thread capThread; private volatile boolean capRunning;
-    private Process play; private OutputStream playOut;
+    // read by the capture and transmit threads too
+    private volatile Process cap; private Thread capThread; private volatile boolean capRunning;
+    private volatile Process play; private volatile OutputStream playOut;
 
     Audio(Context c, Radio.Events log) throws IOException {
         this.helper = install(c, "sdalsa");
@@ -83,9 +84,18 @@ final class Audio {
         return p;
     }
 
+    /**
+     * With the own-su fallback, destroy() ends su only and sdalsa keeps the card: the next capture or playback would
+     * fail. Kill it by its mode. Not needed for a RootPipedProcess, whose destroy() signals sdalsa itself.
+     */
+    private void reap(Process p, String mode) {
+        if (p != null && !(p instanceof RootPipedProcess)) Root.run("pkill -f \"" + helper + " " + mode + "\" 2>/dev/null; true");
+    }
+
     /** Start the receive capture; blocks of 1280 frames go to the sink. */
     synchronized String startCapture() {
         if (capRunning) return "capture already running";
+        if (cap != null) stopCapture();                                 // one that died on its own: its process and pipes
         String cmd = "exec '" + helper + "' cap -c 1 -d 0 -r " + RATE + " -n " + CH + " -p " + CAPTURE_PERIOD + " -k " + CAPTURE_PERIODS + " -q 1 --";
         try { cap = start(cmd, false); } catch (IOException e) { return "capture: " + e.getMessage(); }
         capRunning = true;
@@ -116,6 +126,7 @@ final class Audio {
         capRunning = false;
         Process p = cap; cap = null;
         if (p != null) { p.destroy(); try { p.waitFor(1500, java.util.concurrent.TimeUnit.MILLISECONDS); } catch (InterruptedException ignored) { } }
+        reap(p, "cap");
         return "capture off";
     }
 
@@ -140,6 +151,7 @@ final class Audio {
         play = null; playOut = null;
         if (o != null) try { o.close(); } catch (IOException ignored) { }       // end of input: sdalsa drains and exits
         if (p != null) { try { if (!p.waitFor(1500, java.util.concurrent.TimeUnit.MILLISECONDS)) p.destroy(); } catch (InterruptedException e) { p.destroy(); } }
+        reap(p, "play");
         return "playback off";
     }
 }

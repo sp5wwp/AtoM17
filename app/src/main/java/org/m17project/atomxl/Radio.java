@@ -195,17 +195,18 @@ final class Radio implements Port.Listener {
                     ev.log("reception line through root (" + e.getMessage() + ")");
                 }
                 final java.io.InputStream src = in; final Process proc = p;
-                rxSource = () -> { try { src.close(); } finally { if (proc != null) proc.destroy(); } };
+                if (!ownSource(() -> { try { src.close(); } finally { if (proc != null) proc.destroy(); } })) return;   // stopped meanwhile
                 long started = System.currentTimeMillis();
                 while (rxWatch == Thread.currentThread()) {
                     int b = in.read();
+                    if (rxWatch != Thread.currentThread()) break;               // stopped while it waited: not ours to deliver
                     if (b < 0) {
-                        if (p != null) break;
+                        if (p != null) { ev.log("reception line: the root stream ended"); break; }
                         try { in.close(); } catch (IOException ignored) { }
                         Thread.sleep(50);
                         in = new java.io.FileInputStream(Bridge.STMCU);
                         final java.io.InputStream again = in;
-                        rxSource = again::close;
+                        if (!ownSource(again::close)) break;
                         continue;
                     }
                     if (System.currentTimeMillis() - started < POWER_UP_EDGES_MS) continue;   // the bridge toggles the line at power-up
@@ -223,9 +224,16 @@ final class Radio implements Port.Listener {
         t.start();
     }
 
+    /** The watch thread registers what stopReceptionWatch() must close: false (and nothing kept) when it was stopped already. */
+    private synchronized boolean ownSource(java.io.Closeable c) {
+        if (rxWatch != Thread.currentThread()) return false;
+        rxSource = c;
+        return true;
+    }
+
     private void stopReceptionWatch() {
-        rxWatch = null;
-        java.io.Closeable c = rxSource; rxSource = null;
+        java.io.Closeable c;
+        synchronized (this) { rxWatch = null; c = rxSource; rxSource = null; }
         if (c != null) try { c.close(); } catch (IOException ignored) { }
     }
 }

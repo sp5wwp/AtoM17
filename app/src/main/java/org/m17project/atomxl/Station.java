@@ -65,6 +65,12 @@ final class Station implements Radio.Events, Audio.Sink {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private final List<Listener> listeners = new CopyOnWriteArrayList<>();
     final List<RxEntry> heard = new ArrayList<>();
+    static final int HEARD_MAX = 300;
+
+    /** Newest first, at most HEARD_MAX entries (streams and packets alike: a busy packet channel must not grow it for good). */
+    private void addHeard(RxEntry r) {
+        synchronized (heard) { heard.add(0, r); while (heard.size() > HEARD_MAX) heard.remove(heard.size() - 1); }
+    }
     private final StringBuilder logBuf = new StringBuilder();
 
     private volatile boolean open, starting, flashing, transmitting, receiving;
@@ -414,10 +420,10 @@ final class Station implements Radio.Events, Audio.Sink {
             int kind = e.getInt("kind");
             RxEntry r;
             if (kind == M17Native.EV_STREAM_START || (kind == M17Native.EV_LINK_UPDATE && current == null)) {
-                r = new RxEntry(); current = r; synchronized (heard) { heard.add(0, r); if (heard.size() > 300) heard.remove(heard.size() - 1); }
+                r = new RxEntry(); current = r; addHeard(r);
                 if (cfg.p.getInt("wakeFor", 1) >= 2) wakeScreen();
             }
-            else if (kind == M17Native.EV_PACKET || kind == M17Native.EV_PACKET_BAD) { r = new RxEntry(); synchronized (heard) { heard.add(0, r); } }
+            else if (kind == M17Native.EV_PACKET || kind == M17Native.EV_PACKET_BAD) { r = new RxEntry(); addHeard(r); }
             else r = current;
             if (r == null) return;
             fillLink(r, l);

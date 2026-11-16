@@ -91,7 +91,8 @@ final class Bridge {
     static String usbRoutingOff() {
         String prev = Root.run("settings get secure " + USB_ROUTING_OFF).trim();
         if (!"1".equals(prev)) Root.run("settings put secure " + USB_ROUTING_OFF + " 1");
-        return prev.isEmpty() ? "null" : prev;
+        // a number or "null" (unset): anything else is an error text, which must not end up in the restore command
+        return prev.matches("-?\\d{1,9}") ? prev : "null";
     }
 
     static void usbRoutingRestore(String prev) {
