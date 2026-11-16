@@ -196,7 +196,7 @@ final class Radio implements Port.Listener {
             try {
                 try { in = new java.io.FileInputStream(Bridge.STMCU); }
                 catch (IOException e) {
-                    p = new ProcessBuilder("su", "--mount-master", "--context", "u:r:magisk:s0", "-c", "exec cat " + Bridge.STMCU).start();
+                    p = Root.process("exec cat " + Bridge.STMCU, false);
                     in = p.getInputStream();
                     ev.log("reception line through root (" + e.getMessage() + ")");
                 }

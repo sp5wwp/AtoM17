@@ -14,35 +14,55 @@ import java.nio.charset.StandardCharsets;
 /**
  * One long-lived root shell for small commands that run often (the W6's speaker and receive lines at every reception).
  * Magisk shows its "granted Superuser rights" toast for every su session, so {@link Root#run} (one su per
- * command) toasted at each reception; this opens su once and feeds it commands, each followed by an end marker.
- * Same su flags as {@link Root#run}; if the shell cannot be started or dies twice, the command falls back to it.
+ * command) toasted at each reception. This opens su once and feeds it commands, each followed by an end marker.
+ *
+ * A command is sent at most once: if the shell cannot be started or written to, the command has not run and falls
+ * back to {@link Root#run}. Once it is written, an ended shell or the deadline gives an error text instead of a
+ * second run, because the power sequences and the firmware download must not run twice. The deadline kills the
+ * shell, so one hung command cannot block the callers behind it for good.
  */
 public final class RootShell {
+    private final long timeoutMs;
     private Process proc;
     private OutputStream in;
     private BufferedReader out;
     private int seq;
 
-    /** Run {@code cmd} as root; returns its output (stdout and stderr), trimmed. */
+    RootShell(long timeoutMs) { this.timeoutMs = timeoutMs; }
+
+    /** Run {@code cmd} as root, returns its output (stdout and stderr), trimmed. */
     public synchronized String run(String cmd) {
-        for (int attempt = 0; attempt < 2; attempt++) {
-            try {
-                if (proc == null) start();
-                String end = "__atom17_end_" + (++seq) + "__";
-                in.write((cmd + "\necho " + end + "\n").getBytes(StandardCharsets.UTF_8)); in.flush();
-                StringBuilder sb = new StringBuilder(); String line;
-                while ((line = out.readLine()) != null) {
-                    if (line.equals(end)) return sb.toString().trim();
-                    sb.append(line).append('\n');
-                }
-                close();                                                   // end of stream: the shell is gone, start a new one
-            } catch (IOException e) { close(); }
+        String end = "__atom17_end_" + (++seq) + "__";
+        try {
+            if (proc == null) start();
+            in.write((cmd + "\nprintf '\\n%s\\n' " + end + "\n").getBytes(StandardCharsets.UTF_8));
+            in.flush();
+        } catch (IOException e) {
+            close();
+            return Root.run(cmd);                                         // not sent: one su of its own instead
         }
-        return Root.run(cmd);
+        Process p = proc;
+        Thread watchdog = new Thread(() -> {
+            try { Thread.sleep(timeoutMs); p.destroy(); } catch (InterruptedException ignored) { }
+        }, "root-shell-deadline");
+        watchdog.setDaemon(true);
+        watchdog.start();
+        StringBuilder sb = new StringBuilder();
+        try {
+            String line;
+            while ((line = out.readLine()) != null) {
+                if (line.equals(end)) return sb.toString().trim();
+                sb.append(line).append('\n');
+            }
+        } catch (IOException ignored) {
+        } finally { watchdog.interrupt(); }
+        boolean timedOut = !p.isAlive();
+        close();
+        return (sb.toString().trim() + (timedOut ? " (root shell: no answer in " + timeoutMs / 1000 + " s)" : " (root shell ended)")).trim();
     }
 
     private void start() throws IOException {
-        proc = new ProcessBuilder("su", "--mount-master", "--context", "u:r:magisk:s0").redirectErrorStream(true).start();
+        proc = Root.process(null, true);
         in = proc.getOutputStream();
         out = new BufferedReader(new InputStreamReader(proc.getInputStream(), StandardCharsets.UTF_8));
     }

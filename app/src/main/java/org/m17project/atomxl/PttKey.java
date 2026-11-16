@@ -22,6 +22,9 @@ final class PttKey {
     /** Keys that must never become PTT. */
     private static final java.util.Set<String> REFUSED = new java.util.HashSet<>(java.util.Arrays.asList("KEY_POWER", "BTN_TOUCH", "BTN_TOOL_FINGER", "KEY_WAKEUP"));
 
+    /** Kills and launches of getevent run here in order, so a stop's pkill cannot hit the reader a later start launched. */
+    private static final java.util.concurrent.ExecutorService ROOT_OPS = java.util.concurrent.Executors.newSingleThreadExecutor();
+
     private final Config cfg;
     private volatile Process proc;
     private volatile Thread reader;
@@ -31,10 +34,6 @@ final class PttKey {
     String device() { return cfg.p.getString("pttDev", ""); }
     String code() { return cfg.p.getString("pttKey", ""); }
     boolean learned() { return !device().isEmpty() && !code().isEmpty(); }
-
-    private static Process root(String cmd) throws java.io.IOException {
-        return new ProcessBuilder("su", "--mount-master", "--context", "u:r:magisk:s0", "-c", cmd).redirectErrorStream(true).start();
-    }
 
     /** Device path -> name, from getevent -pl. */
     static java.util.Map<String, String> devices() {
@@ -53,7 +52,7 @@ final class PttKey {
         java.util.Map<String, String> devs = devices();
         Process p = null;
         try {
-            p = root("exec timeout " + seconds + " getevent -ql");
+            p = Root.process("exec timeout " + seconds + " getevent -ql", true);
             BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
             String l;
             while ((l = r.readLine()) != null) {
@@ -77,14 +76,22 @@ final class PttKey {
         if (!learned()) { l.log("PTT key: none learned yet (Device tab)"); return; }
         final String dev = device(), code = code();
         Thread t = new Thread(() -> {
-            String path = null;
-            for (java.util.Map.Entry<String, String> e : devices().entrySet()) if (e.getValue().equals(dev) || e.getKey().equals(dev)) path = e.getKey();
-            if (path == null) { l.log("PTT key: input device \"" + dev + "\" not found"); return; }
-            Root.run("pkill -f 'getevent -ql " + path + "' 2>/dev/null; true");        // a reader left from before
+            Process p;
             try {
-                Process p = root("exec getevent -ql " + path);
+                p = ROOT_OPS.submit(() -> {
+                    String path = null;
+                    for (java.util.Map.Entry<String, String> e : devices().entrySet()) if (e.getValue().equals(dev) || e.getKey().equals(dev)) path = e.getKey();
+                    if (path == null) { l.log("PTT key: input device \"" + dev + "\" not found"); return null; }
+                    Root.run("pkill -f 'getevent -ql " + path + "' 2>/dev/null; true");        // a reader left from before
+                    Process q = Root.process("exec getevent -ql " + path, true);
+                    l.log("PTT key: " + code + " on " + path);
+                    return q;
+                }).get();
+            } catch (Exception e) { l.log("PTT key: " + e.getMessage()); return; }
+            if (p == null) return;
+            if (reader != Thread.currentThread()) { p.destroy(); return; }   // stopped meanwhile
+            try {
                 proc = p;
-                l.log("PTT key: " + code + " on " + path);
                 BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
                 String line;
                 while (reader == Thread.currentThread() && (line = r.readLine()) != null) {
@@ -105,6 +112,6 @@ final class PttKey {
         reader = null;
         Process p = proc; proc = null;
         if (p != null) p.destroy();
-        if (was) new Thread(() -> Root.run("pkill -f 'getevent -ql /dev/input' 2>/dev/null; true")).start();   // its su child outlives destroy()
+        if (was) ROOT_OPS.execute(() -> Root.run("pkill -f 'getevent -ql /dev/input' 2>/dev/null; true"));   // its su child outlives destroy()
     }
 }

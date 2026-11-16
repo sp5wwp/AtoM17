@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * stdin unless {@code feedsInput}.
  */
 final class RootPipedProcess extends Process {
-    private static final RootShell SHELL = new RootShell();
+    private static final RootShell SHELL = new RootShell(30_000);
     private static final AtomicInteger SEQ = new AtomicInteger();
     private static final long OPEN_MS = 3000;   // the shell starts the job at once; longer means the shell or the job is gone
 

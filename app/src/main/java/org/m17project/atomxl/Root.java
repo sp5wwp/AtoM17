@@ -12,7 +12,20 @@ public final class Root {
     private Root() { }
 
     /** Bridge power-ups take seconds, so they get their own shell and a PTT release never waits behind one. */
-    static final RootShell POWER = new RootShell(), QUICK = new RootShell();
+    static final RootShell POWER = new RootShell(240_000), QUICK = new RootShell(5_000);
+
+    /** Longest a one-shot command may take: all of them are quick, a hung su must not hold its caller for good. */
+    private static final long RUN_TIMEOUT_S = 60;
+
+    /**
+     * {@code su --mount-master --context u:r:magisk:s0}, plus {@code -c cmd} when {@code cmd} is not null: the magisk
+     * domain and the global mount namespace. Every root process of the app starts here.
+     */
+    static Process process(String cmd, boolean mergeStderr) throws java.io.IOException {
+        ProcessBuilder b = cmd == null ? new ProcessBuilder("su", "--mount-master", "--context", "u:r:magisk:s0")
+                : new ProcessBuilder("su", "--mount-master", "--context", "u:r:magisk:s0", "-c", cmd);
+        return b.redirectErrorStream(mergeStderr).start();
+    }
 
     static String power(String cmd) { return POWER.run("( " + cmd + " ) </dev/null"); }
     static String quick(String cmd) { return QUICK.run("( " + cmd + " ) </dev/null"); }
@@ -22,12 +35,20 @@ public final class Root {
         StringBuilder sb = new StringBuilder();
         Process p = null;
         try {
-            p = new ProcessBuilder("su", "--mount-master", "--context", "u:r:magisk:s0", "-c", cmd).redirectErrorStream(true).start();
-            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            String line;
-            while ((line = r.readLine()) != null) sb.append(line).append('\n');
-            int rc = p.waitFor();
-            if (rc != 0) sb.append("(rc=").append(rc).append(")");
+            p = process(cmd, true);
+            p.getOutputStream().close();
+            Process q = p;
+            Thread watchdog = new Thread(() -> {
+                try { Thread.sleep(RUN_TIMEOUT_S * 1000); q.destroy(); } catch (InterruptedException ignored) { }
+            }, "su-deadline");
+            watchdog.setDaemon(true);
+            watchdog.start();
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                String line;
+                while ((line = r.readLine()) != null) sb.append(line).append('\n');
+            } finally { watchdog.interrupt(); }
+            if (!p.waitFor(RUN_TIMEOUT_S, java.util.concurrent.TimeUnit.SECONDS)) { p.destroy(); sb.append("(su: no answer in " + RUN_TIMEOUT_S + " s)"); }
+            else if (p.exitValue() != 0) sb.append("(rc=").append(p.exitValue()).append(")");
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             if (p != null) p.destroy();

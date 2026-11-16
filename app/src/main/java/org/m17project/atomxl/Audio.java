@@ -71,7 +71,7 @@ final class Audio {
         try { p = RootPipedProcess.start(filesDir, cmd, feedsInput); }
         catch (IOException e) {
             log.log("root pipe: " + e.getMessage() + "; own su");
-            p = new ProcessBuilder("su", "--mount-master", "--context", "u:r:magisk:s0", "-c", cmd).start();
+            p = Root.process(cmd, false);
         }
         final InputStream es = p.getErrorStream();
         Thread t = new Thread(() -> {
