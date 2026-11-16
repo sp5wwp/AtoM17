@@ -129,15 +129,43 @@ JNIEXPORT jshortArray JNICALL JF(c2Loopback)(JNIEnv* env, jclass c, jshortArray 
     return outA;
 }
 
+/*
+ * `in` (UTF-8 from the air, maybe invalid or cut) as the inside of a JSON string, in plain ASCII: quotes, backslashes
+ * and control characters escaped, every other non-ASCII character as \uXXXX (a surrogate pair above U+FFFF), bytes
+ * that are not valid UTF-8 as U+FFFD. NewStringUTF() takes only valid modified UTF-8 and aborts on anything else under
+ * CheckJNI (debuggable builds), so received text never reaches it raw.
+ */
 static void jesc(char* out, size_t cap, const char* in)
 {
+    const unsigned char* s = (const unsigned char*)in;
     size_t o = 0;
-    for (; *in && o + 7 < cap; in++)
+    while (*s && o + 13 < cap)
     {
-        unsigned char ch = (unsigned char)*in;
-        if (ch == '"' || ch == '\\') { out[o++] = '\\'; out[o++] = (char)ch; }
-        else if (ch < 0x20) o += (size_t)snprintf(out + o, cap - o, "\\u%04x", ch);
-        else out[o++] = (char)ch;
+        uint32_t cp = *s;
+        int len = 1;
+        if (cp >= 0x80)
+        {
+            len = cp >= 0xF0 && cp <= 0xF4 ? 4 : cp >= 0xE0 ? 3 : cp >= 0xC2 && cp < 0xE0 ? 2 : 0;
+            if (len == 4) cp &= 0x07; else if (len == 3) cp &= 0x0F; else if (len == 2) cp &= 0x1F;
+            for (int i = 1; i < len; i++)
+            {
+                if ((s[i] & 0xC0) != 0x80) { len = 0; break; }
+                cp = (cp << 6) | (s[i] & 0x3F);
+            }
+            /* overlong forms, surrogates and values past U+10FFFF are not valid either */
+            if (len == 3 && (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF))) len = 0;
+            if (len == 4 && (cp < 0x10000 || cp > 0x10FFFF)) len = 0;
+            if (len == 0) { cp = 0xFFFD; len = 1; }
+        }
+        s += len;
+        if (cp == '"' || cp == '\\') { out[o++] = '\\'; out[o++] = (char)cp; }
+        else if (cp >= 0x20 && cp < 0x7F) out[o++] = (char)cp;
+        else if (cp < 0x10000) o += (size_t)snprintf(out + o, cap - o, "\\u%04x", (unsigned)cp);
+        else
+        {
+            cp -= 0x10000;
+            o += (size_t)snprintf(out + o, cap - o, "\\u%04x\\u%04x", 0xD800u + (cp >> 10), 0xDC00u + (cp & 0x3FF));
+        }
     }
     out[o] = 0;
 }
@@ -170,7 +198,8 @@ JNIEXPORT jstring JNICALL JF(rxNextEvent)(JNIEnv* env, jclass c, jlong p)
     if (!m17rx_next_event(h->rx, ev)) { free(ev); return NULL; }
     size_t cap = 8192;
     char* b = malloc(cap);
-    char key[64], sms[3400];
+    if (!b) { free(ev); return NULL; }
+    char key[64], sms[M17RX_PKT_MAX * 6 + 16];         /* every byte of an SMS escaped as at most \uXXXX */
     jesc(key, sizeof key, ev->sig_key);
     jesc(sms, sizeof sms, ev->sms);
     int o = snprintf(b, cap, "{\"kind\":%d,\"end\":%d,\"frames\":%d,\"lost\":%d,\"duration\":%.2f,\"evm\":%.2f,\"sig\":%d,\"sigKey\":\"%s\",\"protocol\":%d,\"length\":%d,\"sms\":\"%s\",\"data\":\"",
@@ -247,14 +276,48 @@ JNIEXPORT jint JNICALL JF(rxAddKey)(JNIEnv* env, jclass c, jlong p, jstring name
 JNIEXPORT jlong JNICALL JF(txCreate)(JNIEnv* env, jclass c) { return (jlong)(intptr_t)m17tx_create(); }
 JNIEXPORT void JNICALL JF(txDestroy)(JNIEnv* env, jclass c, jlong p) { m17tx_destroy((m17tx_t*)(intptr_t)p); }
 
+/*
+ * A Java string as standard UTF-8 in `out` (cap bytes with the NUL), cut only between whole characters.
+ * GetStringUTFChars() gives modified UTF-8 (six bytes for an emoji, C0 80 for NUL), which other receivers show as
+ * garbage, so the UTF-16 units are encoded here. A lone surrogate becomes U+FFFD.
+ */
 static void jstr(JNIEnv* env, jstring s, char* out, size_t cap)
 {
     out[0] = 0;
     if (!s) return;
-    const char* u = (*env)->GetStringUTFChars(env, s, NULL);
-    strncpy(out, u, cap - 1);
-    out[cap - 1] = 0;
-    (*env)->ReleaseStringUTFChars(env, s, u);
+    jsize n = (*env)->GetStringLength(env, s);
+    if (n > (jsize)cap) n = (jsize)cap;               /* every unit takes at least one byte */
+    jchar u[256];
+    if (n > 256) n = 256;
+    (*env)->GetStringRegion(env, s, 0, n, u);
+    size_t o = 0;
+    for (jsize i = 0; i < n; i++)
+    {
+        uint32_t cp = u[i];
+        if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < n && u[i + 1] >= 0xDC00 && u[i + 1] <= 0xDFFF)
+            cp = 0x10000 + ((cp - 0xD800) << 10) + (u[++i] - 0xDC00);
+        else if (cp >= 0xD800 && cp <= 0xDFFF)
+            cp = 0xFFFD;
+        uint8_t e[4];
+        size_t len;
+        if (cp < 0x80) { e[0] = (uint8_t)cp; len = 1; }
+        else if (cp < 0x800) { e[0] = (uint8_t)(0xC0 | cp >> 6); e[1] = (uint8_t)(0x80 | (cp & 0x3F)); len = 2; }
+        else if (cp < 0x10000)
+        {
+            e[0] = (uint8_t)(0xE0 | cp >> 12); e[1] = (uint8_t)(0x80 | ((cp >> 6) & 0x3F)); e[2] = (uint8_t)(0x80 | (cp & 0x3F));
+            len = 3;
+        }
+        else
+        {
+            e[0] = (uint8_t)(0xF0 | cp >> 18); e[1] = (uint8_t)(0x80 | ((cp >> 12) & 0x3F));
+            e[2] = (uint8_t)(0x80 | ((cp >> 6) & 0x3F)); e[3] = (uint8_t)(0x80 | (cp & 0x3F));
+            len = 4;
+        }
+        if (o + len > cap - 1) break;
+        memcpy(out + o, e, len);
+        o += len;
+    }
+    out[o] = 0;
 }
 
 static void jbytes(JNIEnv* env, jbyteArray a, uint8_t* out, int cap)

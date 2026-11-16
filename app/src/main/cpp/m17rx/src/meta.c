@@ -50,23 +50,38 @@ static int text_block(m17_text_t *t, const uint8_t meta[14])
 }
 
 /* Text assembled from the blocks received so far, in block order. */
+/* Length of `s` (n bytes) without a UTF-8 sequence cut at its end (a block boundary can split a character). */
+static size_t utf8_whole(const char *s, size_t n)
+{
+    size_t i = n, back = 0;
+    while (i > 0 && back < 4 && ((unsigned char)s[i - 1] & 0xC0) == 0x80) { i--; back++; }
+    if (i == 0) return n;
+    unsigned char lead = (unsigned char)s[i - 1];
+    size_t need = lead >= 0xF0 ? 4 : lead >= 0xE0 ? 3 : lead >= 0xC0 ? 2 : 1;
+    return need > back + 1 ? i - 1 : n;
+}
+
 static void text_render(const m17_text_t *t, char *out, size_t cap, int32_t *complete)
 {
     size_t n = 0;
     int total = popcount4(t->used);
+    /* the blocks in order, up to the first one not received yet: the text after a gap would read as if it followed */
     for (int i = 0; i < total && n + 13 < cap; i++)
     {
         if (!(t->have & (1u << i)))
-            continue;
+            break;
         memcpy(out + n, t->block[i], 13);
         n += 13;
     }
+    *complete = (t->used != 0 && t->have == t->used);
     /* stop at a NUL, trim trailing spaces (the last block is space-padded) */
     out[n] = 0;
     n = strlen(out);
+    if (!*complete)
+        n = utf8_whole(out, n);
+    out[n] = 0;
     while (n > 0 && (out[n - 1] == ' ' || out[n - 1] == 0))
         out[--n] = 0;
-    *complete = (t->used != 0 && t->have == t->used);
 }
 
 int m17_link_from_lsf(m17rx_link_t *link, const lsf_t *lsf, int from_lich, m17_text_t *text)
