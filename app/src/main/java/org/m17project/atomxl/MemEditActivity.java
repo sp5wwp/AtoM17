@@ -127,8 +127,8 @@ public final class MemEditActivity extends Activity {
             up.setEnabled(index > 0); down.setEnabled(index < l.size() - 1);
             up.setOnClickListener(v -> move(-1));
             down.setOnClickListener(v -> move(1));
-            mv.addView(up, new LinearLayout.LayoutParams(0, Ui.dp(this, 42), 1));
-            LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(0, Ui.dp(this, 42), 1);
+            mv.addView(up, new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1));
+            LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1);
             dp.leftMargin = Ui.dp(this, 8);
             mv.addView(down, dp);
             body.addView(mv, Ui.matchWrap(this, 16));
@@ -200,7 +200,7 @@ public final class MemEditActivity extends Activity {
 
     private Button small(String s) {
         Button b = new Button(this);
-        b.setText(s); b.setAllCaps(false); b.setTextColor(Ui.WHITE); b.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); b.setTextSize(14);
+        b.setText(s); b.setAllCaps(false); b.setTextColor(getColorStateList(R.color.btn_text)); b.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); b.setTextSize(14);
         b.setBackgroundResource(R.drawable.btn); b.setMinHeight(0); b.setMinimumHeight(0);
         return b;
     }

@@ -81,10 +81,10 @@ public final class KeyEditActivity extends Activity {
             for (byte x : r) h.append(String.format("%02X", x & 0xFF));
             key.hex = h.toString(); showValue();
         });
-        acts.addView(show, new LinearLayout.LayoutParams(0, Ui.dp(this, 42), 1));
-        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(0, Ui.dp(this, 42), 1); ap.leftMargin = Ui.dp(this, 8);
+        acts.addView(show, new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1));
+        LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1); ap.leftMargin = Ui.dp(this, 8);
         acts.addView(enter, ap);
-        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(0, Ui.dp(this, 42), 1); gp.leftMargin = Ui.dp(this, 8);
+        LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1); gp.leftMargin = Ui.dp(this, 8);
         acts.addView(gen, gp);
         body.addView(acts, Ui.matchWrap(this, 10));
 
@@ -170,7 +170,7 @@ public final class KeyEditActivity extends Activity {
 
     private Button small(String s) {
         Button b = new Button(this);
-        b.setText(s); b.setAllCaps(false); b.setTextColor(Ui.WHITE); b.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); b.setTextSize(14);
+        b.setText(s); b.setAllCaps(false); b.setTextColor(getColorStateList(R.color.btn_text)); b.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); b.setTextSize(14);
         b.setBackgroundResource(R.drawable.btn); b.setMinHeight(0); b.setMinimumHeight(0);
         return b;
     }

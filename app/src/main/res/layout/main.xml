@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- AtoM17 main screen. The frequency block's top edge is placed at 25 % of the screen height in code (topSpace);
-     the FM / M17 switch sits directly above it. Options live in SettingsActivity (gear). -->
+<!-- AtoM17 main screen: header, FM / M17 and VFO / MEM switches, the frequency, the tabs and their panels.
+     Options live in SettingsActivity (gear). Touch targets are 48 dp, the Start / Stop pill 44 dp (the header is 48). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:paddingLeft="10dp" android:paddingRight="10dp" android:paddingTop="4dp">
@@ -10,7 +10,7 @@
         <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/logo" android:contentDescription="M17" />
         <TextView android:id="@+id/status" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
             android:paddingLeft="8dp" android:textColor="@color/text3" android:textSize="11.5sp" android:maxLines="2" android:text="Radio off" />
-        <Button android:id="@+id/power" android:layout_width="wrap_content" android:layout_height="34dp" android:minWidth="64dp" android:minHeight="0dp"
+        <Button android:id="@+id/power" android:layout_width="wrap_content" android:layout_height="44dp" android:minWidth="64dp" android:minHeight="0dp"
             android:background="@drawable/pill" android:textColor="@color/white" android:textStyle="bold" android:textAllCaps="false" android:textSize="13sp"
             android:paddingLeft="14dp" android:paddingRight="14dp" android:text="Start" />
         <!-- the 24 dp icon sits 12 dp inside its 48 dp button: pull it out by that much so its edge lines up with the widgets below -->
@@ -18,15 +18,13 @@
             android:layout_marginRight="-12dp" android:background="@drawable/row_bg" android:contentDescription="Settings" />
     </LinearLayout>
 
-    <View android:id="@+id/topSpace" android:layout_width="match_parent" android:layout_height="0dp" />
-
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
         android:gravity="center_vertical" android:paddingBottom="8dp">
         <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal"
             android:background="@drawable/seg_bg" android:padding="3dp">
-            <TextView android:id="@+id/modeFm" android:layout_width="wrap_content" android:layout_height="36dp" android:minWidth="68dp"
+            <TextView android:id="@+id/modeFm" android:layout_width="wrap_content" android:layout_height="48dp" android:minWidth="68dp"
                 android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="FM" />
-            <TextView android:id="@+id/modeM17" android:layout_width="wrap_content" android:layout_height="36dp" android:minWidth="68dp"
+            <TextView android:id="@+id/modeM17" android:layout_width="wrap_content" android:layout_height="48dp" android:minWidth="68dp"
                 android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="M17" />
         </LinearLayout>
         <FrameLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1">
@@ -36,9 +34,9 @@
         </FrameLayout>
         <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal"
             android:background="@drawable/seg_bg" android:padding="3dp">
-            <TextView android:id="@+id/modeVfo" android:layout_width="wrap_content" android:layout_height="36dp" android:minWidth="68dp"
+            <TextView android:id="@+id/modeVfo" android:layout_width="wrap_content" android:layout_height="48dp" android:minWidth="68dp"
                 android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="VFO" />
-            <TextView android:id="@+id/modeMem" android:layout_width="wrap_content" android:layout_height="36dp" android:minWidth="68dp"
+            <TextView android:id="@+id/modeMem" android:layout_width="wrap_content" android:layout_height="48dp" android:minWidth="68dp"
                 android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="MEM" />
         </LinearLayout>
     </LinearLayout>
@@ -55,11 +53,11 @@
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
         android:background="@drawable/seg_bg" android:padding="3dp">
-        <TextView android:id="@+id/tabLive" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp"
+        <TextView android:id="@+id/tabLive" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
             android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="Live" />
-        <TextView android:id="@+id/tabHeard" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp"
+        <TextView android:id="@+id/tabHeard" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
             android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="Last" />
-        <LinearLayout android:id="@+id/tabInbox" android:layout_width="0dp" android:layout_weight="1" android:layout_height="38dp"
+        <LinearLayout android:id="@+id/tabInbox" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
             android:orientation="horizontal" android:gravity="center">
             <TextView android:id="@+id/tabInboxText" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:textStyle="bold" android:textSize="14sp" android:text="Inbox" />

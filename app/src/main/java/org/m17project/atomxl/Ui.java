@@ -114,9 +114,7 @@ final class Ui {
     static ImageView icon(Context c, int res, int tint) {
         ImageView i = new ImageView(c);
         i.setImageResource(res); i.setColorFilter(tint);
-        GradientDrawable d = new GradientDrawable(); d.setCornerRadius(dp(c, 8)); d.setColor(0x24FFFFFF);
-        i.setBackground(d);
-        int p = dp(c, 6); i.setPadding(p, p, p, p);
+        int p = dp(c, 4); i.setPadding(p, p, p, p);                  // no button-like background: these only show a state
         i.setLayoutParams(new LinearLayout.LayoutParams(dp(c, 28), dp(c, 28)));
         return i;
     }

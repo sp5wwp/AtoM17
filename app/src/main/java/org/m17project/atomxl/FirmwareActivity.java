@@ -63,7 +63,7 @@ public final class FirmwareActivity extends Activity {
         restore = new Button(this); restore.setText("Restore vendor V076");
         trimBtn = new Button(this); trimBtn.setText("Trim M17 deviation…");
         for (Button x : new Button[] { load, trimBtn, restore }) {
-            x.setBackgroundResource(R.drawable.btn); x.setTextColor(Ui.WHITE); x.setAllCaps(false);
+            x.setBackgroundResource(R.drawable.btn); x.setTextColor(getColorStateList(R.color.btn_text)); x.setAllCaps(false);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(this, 48));
             lp.topMargin = Ui.dp(this, 8);
             root.addView(x, lp);

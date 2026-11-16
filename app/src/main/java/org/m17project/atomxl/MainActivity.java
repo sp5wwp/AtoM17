@@ -129,23 +129,14 @@ public final class MainActivity extends Activity implements Station.Listener {
         mid.addView(l2, Ui.matchWrap(this, 4));
         mid.addView(memTag, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT) {{ topMargin = Ui.dp(MainActivity.this, 5); }});
         mid.setOnClickListener(v -> startActivity(new Intent(this, MemoriesActivity.class)));
-        memCard.addView(prev, new LinearLayout.LayoutParams(Ui.dp(this, 36), ViewGroup.LayoutParams.MATCH_PARENT));
+        memCard.addView(prev, new LinearLayout.LayoutParams(Ui.dp(this, 48), ViewGroup.LayoutParams.MATCH_PARENT));
         memCard.addView(mid, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
-        memCard.addView(next, new LinearLayout.LayoutParams(Ui.dp(this, 36), ViewGroup.LayoutParams.MATCH_PARENT));
+        memCard.addView(next, new LinearLayout.LayoutParams(Ui.dp(this, 48), ViewGroup.LayoutParams.MATCH_PARENT));
         freqBox.addView(memCard, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         freq.setHz(cfg.freq());
         freq.setStep(cfg.step());
         freq.setOnChange(hz -> { cfg.edit().putInt("freq", hz).apply(); st.applyChannel(); });
         freq.setOnLongClickListener(v -> { typeFrequency(); return true; });
-
-        // the frequency selector's top edge at 25 % of the screen height
-        findViewById(R.id.header).post(() -> {
-            View space = findViewById(R.id.topSpace), holder = findViewById(R.id.freqHolder);
-            int[] at = new int[2]; holder.getLocationInWindow(at);
-            int target = Math.round(getWindow().getDecorView().getHeight() * 0.21f);
-            space.getLayoutParams().height = Math.max(0, target - at[1]);
-            space.requestLayout();
-        });
 
         power.setOnClickListener(v -> { if (st.isOpen() || st.isStarting()) RadioService.stop(this); else RadioService.start(this); });
         findViewById(R.id.gear).setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
@@ -213,6 +204,7 @@ public final class MainActivity extends Activity implements Station.Listener {
             findViewById(PANELS[i]).setVisibility(i == tab ? View.VISIBLE : View.GONE);
             View t = findViewById(TABS[i]);
             t.setBackgroundResource(i == tab ? R.drawable.tab_on : 0);
+            t.setSelected(i == tab);                                       // TalkBack says which tab is open
             TextView label = i == 2 ? findViewById(R.id.tabInboxText) : (TextView) t;
             label.setTextColor(i == tab ? Ui.WHITE : Ui.TEXT3);
         }
@@ -327,8 +319,8 @@ public final class MainActivity extends Activity implements Station.Listener {
             ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("position", String.format(Locale.US, "%.6f, %.6f", posLat, posLon)));
             Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show();
         });
-        metaButtons.addView(map, new LinearLayout.LayoutParams(0, Ui.dp(this, 38), 1));
-        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(0, Ui.dp(this, 38), 1); cp.leftMargin = Ui.dp(this, 8);
+        metaButtons.addView(map, new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1));
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1); cp.leftMargin = Ui.dp(this, 8);
         metaButtons.addView(copy, cp);
         meta.addView(metaButtons, Ui.matchWrap(this, 6));
         liveCard.addView(meta, Ui.matchWrap(this, 6));
@@ -418,13 +410,14 @@ public final class MainActivity extends Activity implements Station.Listener {
             String what = r.enc == 2 ? "AES-" + (128 + 64 * r.encSub) : "Scrambler " + (8 * (r.encSub + 1));
             enc = what + " · " + (r.decrypt == 1 ? (r.enc == 2 ? "decrypted" : "descrambled") : r.decrypt == 3 ? "unsupported" : "no key");
             encColor = r.decrypt == 1 ? Ui.OK : r.decrypt == 3 ? Ui.BAD : Ui.WARN;
-            lockIcon.setVisibility(View.VISIBLE); lockIcon.setColorFilter(encColor);
+            lockIcon.setVisibility(View.VISIBLE); lockIcon.setColorFilter(encColor); lockIcon.setContentDescription("Encrypted: " + enc);
         }
         cell(1, "Encryption", enc, encColor);
         String sig; int sigColor = Ui.WHITE;
         if (!r.signed) { sig = "Not signed"; sigColor = Ui.TEXT3; }
         else {
             sealIcon.setVisibility(View.VISIBLE);
+            sealIcon.setContentDescription("Signed");
             if (live || r.sig < 0) sig = "Checked at end";
             else switch (r.sig) {
                 case 1: sig = "Valid" + (r.sigKey.isEmpty() ? "" : " · " + r.sigKey); sigColor = Ui.OK; break;
@@ -590,9 +583,11 @@ public final class MainActivity extends Activity implements Station.Listener {
         }
         busyPopup();
         boolean m17 = cfg.m17();
+        modeFm.setSelected(!m17); modeM17.setSelected(m17);              // TalkBack says which
         modeFm.setBackgroundResource(m17 ? 0 : R.drawable.seg_on); modeFm.setTextColor(m17 ? Ui.TEXT3 : Ui.ON_ORANGE);
         modeM17.setBackgroundResource(m17 ? R.drawable.seg_on : 0); modeM17.setTextColor(m17 ? Ui.ON_ORANGE : Ui.TEXT3);
         boolean memOn = mem.memMode() && !mem.all().isEmpty();
+        modeVfo.setSelected(!memOn); modeMem.setSelected(memOn);
         modeVfo.setBackgroundResource(memOn ? 0 : R.drawable.seg_on); modeVfo.setTextColor(memOn ? Ui.TEXT3 : Ui.ON_ORANGE);
         modeMem.setBackgroundResource(memOn ? R.drawable.seg_on : 0); modeMem.setTextColor(memOn ? Ui.ON_ORANGE : Ui.TEXT3);
         // MEM: the compact card takes the digits' place (they stay laid out, invisible, so the card keeps their height)
