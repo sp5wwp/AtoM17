@@ -482,6 +482,9 @@ final class Flasher {
             if (variant(moduleTag) == Variant.NEWER && !ui.confirmReplace(moduleTag)) return "NOT CONFIRMED: " + moduleTag + " stays installed";
         } else {
             if (image == null) return "REFUSED: " + VENDOR_V076_FILE + " is missing or not the vendor V076";
+            // Restore is also the way out of a module left in its loader, so an unknown module is no reason to refuse.
+            // A newer vendor build is: V076 would replace it for good, as a Load would.
+            if (variant(moduleTag) == Variant.NEWER && !ui.confirmReplace(moduleTag)) return "NOT CONFIRMED: " + moduleTag + " stays installed";
             if (!STOCK_BRIDGE_SHA.equals(sha256(stockBridge() == null ? new byte[0] : stockBridge())) || p1Bridge() == null) return "REFUSED: the stock bridge file is missing or not the known one";
         }
 
