@@ -48,11 +48,8 @@ final class Flasher {
     private final Context ctx;
     private final Radio radio;
     private final Ui ui;
-    private final java.util.concurrent.atomic.AtomicBoolean halt = new java.util.concurrent.atomic.AtomicBoolean();
 
     Flasher(Context ctx, Radio radio, Ui ui) { this.ctx = ctx; this.radio = radio; this.ui = ui; }
-
-    void halt() { halt.set(true); }
 
     static boolean loaderBridge(String date) { return B4_DATE.equals(date) || P1_DATE.equals(date); }
 
@@ -417,7 +414,6 @@ final class Flasher {
             ui.phase("transfer");
             int blocks = (image.length + 127) / 128, seq = 1;
             for (int i = 0; i < blocks; i++) {
-                if (halt.get()) { ui.log("stopped after block " + i + " of " + blocks); return null; }
                 drain(w);
                 byte[] data = new byte[128];
                 int k = Math.min(128, image.length - i * 128);
@@ -469,7 +465,6 @@ final class Flasher {
 
     /** Load V076J (or, with {@code restore}, the vendor V076). Returns a one-line outcome. */
     String run(boolean restore, String moduleTag) {
-        halt.set(false);
         ui.phase("preparing");
         byte[] image = restore ? vendorV076() : m17Image();
         String want = restore ? V076_TAG : tagOf(image);

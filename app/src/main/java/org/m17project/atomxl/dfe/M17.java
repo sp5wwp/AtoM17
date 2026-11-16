@@ -4,8 +4,6 @@
  */
 package org.m17project.atomxl.dfe;
 
-
-
 import java.util.Locale;
 
 /**
@@ -90,47 +88,6 @@ public final class M17 {
         }
         return s;
     }
-    /** Stream + Codec 2 voice, no encryption. The channel access number (0–15) is TYPE bits 10:7. CAN 0 is 0x0005. */
-    public static int streamVoice(int can) {
-        int n = can < 0 ? 0 : Math.min(15, can);
-        return 0x0005 | (n << 7);
-    }
-
-    /** The 30-byte LSF: destination, source, type, META (14 bytes), CRC. Type 0x0005 = stream, voice, no encryption, CAN 0. */
-    public static byte[] lsf(String src, String dst, int type, byte[] meta) {
-        byte[] d = new byte[30];
-        System.arraycopy(callsign(dst), 0, d, 0, 6); System.arraycopy(callsign(src), 0, d, 6, 6);
-        d[12] = (byte) (type >> 8); d[13] = (byte) type;
-        if (meta != null) System.arraycopy(meta, 0, d, 14, Math.min(14, meta.length));
-        int c = crc16(d, 28); d[28] = (byte) (c >> 8); d[29] = (byte) c;
-        return d;
-    }
-    /** A callsign the air will accept: the charset, at most 9 characters, SSID removed. Empty becomes N0CALL. */
-    public static String voiceCall(String raw) {
-        if (raw == null) return "N0CALL";
-        String u = raw.trim().toUpperCase(Locale.US);
-        int dash = u.indexOf('-');
-        if (dash >= 0) u = u.substring(0, dash);
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < u.length() && sb.length() < 9; i++) if (CHARS.indexOf(u.charAt(i)) >= 0) sb.append(u.charAt(i));
-        return sb.length() == 0 ? "N0CALL" : sb.toString();
-    }
-
-    /** Four symbols per byte, first symbol in bits 7:6. 01 = +3, 00 = +1, 10 = -1, 11 = -3. */
-    public static byte[] packSymbols(int[] syms) {
-        if ((syms.length & 3) != 0) throw new IllegalArgumentException("symbol count " + syms.length);
-        byte[] o = new byte[syms.length / 4];
-        for (int i = 0, n = 0; i < syms.length; i += 4, n++) {
-            int b = 0;
-            for (int k = 0; k < 4; k++) {
-                int s = syms[i + k];
-                int d = s == 3 ? 1 : s == 1 ? 0 : s == -1 ? 2 : 3;
-                b = (b << 2) | d;
-            }
-            o[n] = (byte) b;
-        }
-        return o;
-    }
 
     /** 40 ms of the +3/−3 preamble the specification puts in front of a voice transmission. */
     public static int[] preamble() {
@@ -139,25 +96,7 @@ public final class M17 {
         return s;
     }
 
-    /** The end-of-transmission marker: 40 ms (192 symbols) of the EOT pattern after the end-bit frame, as the
-     *  specification has it. The two-marker pad that covered the module's early carrier drop came out with FW20,
-     *  which plays the ring out before dropping. */
-    public static int[] eotTail() {
-        int[] s = new int[192];
-        for (int i = 0; i < s.length; i++) s[i] = EOT_SYMBOLS[i % EOT_SYMBOLS.length];
-        return s;
-    }
-
     public static int[] lsfSymbols(byte[] lsf) { return frameSymbols(SYNC_LSF, convEncode(bits(lsf, 240), P1, 368)); }
-    public static int[] streamSymbols(byte[] lsf, int fn, byte[] payload16, int lichCnt) {
-        byte[] lich = new byte[6]; System.arraycopy(lsf, 5 * lichCnt, lich, 0, 5); lich[5] = (byte) (lichCnt << 5);
-        long lb = 0; for (byte b : lich) lb = (lb << 8) | (b & 0xFF);
-        byte[] t2 = new byte[368];
-        for (int k = 0; k < 4; k++) { int cw = golay((int) ((lb >> (36 - 12 * k)) & 0xFFF)); for (int j = 0; j < 24; j++) t2[24 * k + j] = (byte) ((cw >> (23 - j)) & 1); }
-        byte[] d = new byte[18]; d[0] = (byte) (fn >> 8); d[1] = (byte) fn; System.arraycopy(payload16, 0, d, 2, 16);
-        System.arraycopy(convEncode(bits(d, 144), P2, 272), 0, t2, 96, 272);
-        return frameSymbols(SYNC_STR, t2);
-    }
 
     /** A stream frame from its decoded LICH chunk (6 bytes) rather than the whole LSF: what the receiver re-encodes. */
     public static int[] streamSymbolsFromLich(byte[] lich6, int fn, byte[] payload16) {
@@ -258,38 +197,6 @@ public final class M17 {
 
     // ---- packet mode (spec sections 2.9 and 3.3; no LICH) ---------------------------------------------
 
-    /** Packet LSF type: packet/stream bit 0 is 0, CAN in bits 10:7, every other bit reserved. */
-    public static int packetType(int can) {
-        int n = can < 0 ? 0 : Math.min(15, can);
-        return n << 7;
-    }
-    public static byte[] encodePacketLsf(String src, String dst, int can) { return lsf(src, dst, packetType(can), null); }
-
-    public static String protocolName(int id) {
-        switch (id) {
-            case 0x00: return "raw";
-            case 0x01: return "AX.25";   // i18n: protocol name
-            case 0x02: return "APRS";
-            case 0x03: return "6LoWPAN";
-            case 0x04: return "IPv4";
-            case 0x05: return "SMS";
-            case 0x06: return "Winlink";   // i18n: protocol name
-            default: return ("proto " + id);
-        }
-    }
-
-    /** SMS packet data: type 0x05, the text, a terminating null, then the CRC over those bytes. */
-    public static byte[] smsPayload(String text) {
-        byte[] t = (text == null ? "" : text).getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        if (t.length > 818) t = java.util.Arrays.copyOf(t, 818);
-        byte[] d = new byte[1 + t.length + 1 + 2];
-        d[0] = 0x05;
-        System.arraycopy(t, 0, d, 1, t.length);
-        int c = crc16(d, d.length - 2);
-        d[d.length - 2] = (byte) (c >> 8); d[d.length - 1] = (byte) c;
-        return d;
-    }
-
     /** One packet frame after it has been decoded. `chunk` is 25 bytes; `count` of them are valid. */
     public static final class Packet {
         public final boolean eof; public final int counter; public final byte[] chunk;
@@ -311,35 +218,6 @@ public final class M17 {
         return frameSymbols(SYNC_PKT, convEncode(packetBits(chunk, eof, counter), P3, 368));
     }
 
-    /** The packet frames for one buffer, in order. The last frame's counter is its valid byte count. */
-    public static java.util.List<int[]> encodePacket(byte[] data) {
-        java.util.List<int[]> out = new java.util.ArrayList<>();
-        if (data == null || data.length == 0) return out;
-        int frame = 0, off = 0;
-        while (off < data.length && frame < 33) {
-            int n = Math.min(25, data.length - off);
-            boolean last = off + n >= data.length;
-            byte[] chunk = new byte[25];
-            System.arraycopy(data, off, chunk, 0, n);
-            out.add(packetSymbols(chunk, last, last ? n : frame));
-            off += n;
-            if (!last) frame++;
-        }
-        return out;
-    }
-
-    /** Preamble, the packet LSF, the packet frames, and the end marker, as one symbol list. */
-    public static int[] packetTransmission(String src, String dst, int can, byte[] data) {
-        java.util.List<int[]> frames = encodePacket(data);
-        int n = 192 + 192 + frames.size() * 192 + 192;
-        int[] s = new int[n]; int at = 0;
-        System.arraycopy(preamble(), 0, s, at, 192); at += 192;
-        System.arraycopy(lsfSymbols(encodePacketLsf(src, dst, can)), 0, s, at, 192); at += 192;
-        for (int[] f : frames) { System.arraycopy(f, 0, s, at, 192); at += 192; }
-        System.arraycopy(eotTail(), 0, s, at, 192);
-        return s;
-    }
-
     public static Packet decodePacket(float[] sym, int off) {
         float[] soft = softBits(sym, off);
         byte[] bits = viterbi(soft, 0, 368, P3, 206, null);
@@ -349,36 +227,4 @@ public final class M17 {
         return new Packet((meta & 32) != 0, meta & 31, chunk);
     }
 
-    /**
-     * Join packet frames and check the CRC. Returns the type byte and payload, without the CRC, or null when the
-     * CRC fails or a frame is missing. The list must start at frame 0 and end on the last-frame bit.
-     */
-    public static byte[] assemble(java.util.List<Packet> frames) {
-        if (frames == null || frames.isEmpty()) return null;
-        java.io.ByteArrayOutputStream o = new java.io.ByteArrayOutputStream();
-        int expect = 0;
-        for (int i = 0; i < frames.size(); i++) {
-            Packet f = frames.get(i);
-            boolean last = i == frames.size() - 1;
-            if (f.eof != last) return null;
-            if (!f.eof && f.counter != expect) return null;
-            int n = f.count();
-            if (n < 1 || n > 25) return null;
-            o.write(f.chunk, 0, n);
-            if (!f.eof) expect++;
-        }
-        byte[] all = o.toByteArray();
-        if (all.length < 3) return null;
-        int got = ((all[all.length - 2] & 0xFF) << 8) | (all[all.length - 1] & 0xFF);
-        if (crc16(all, all.length - 2) != got) return null;
-        return java.util.Arrays.copyOf(all, all.length - 2);
-    }
-
-    /** The SMS text inside a checked packet body (type byte plus payload, no CRC). Null when it is not SMS. */
-    public static String smsText(byte[] body) {
-        if (body == null || body.length < 2 || (body[0] & 0xFF) != 0x05) return null;
-        int end = 1;
-        while (end < body.length && body[end] != 0) end++;
-        return new String(body, 1, end - 1, java.nio.charset.StandardCharsets.UTF_8);
-    }
 }

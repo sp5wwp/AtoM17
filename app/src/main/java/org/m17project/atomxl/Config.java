@@ -34,7 +34,6 @@ final class Config {
     String metaText() { return p.getString("metaText", ""); }
     String ecd1() { return p.getString("ecd1", ""); }
     String ecd2() { return p.getString("ecd2", ""); }
-    boolean gnssFromPhone() { return p.getBoolean("gnssPhone", true); }
     int station() { return p.getInt("station", 2); }
     int enc() { return p.getInt("enc", M17Native.ENC_NONE); }
     int aesBits() { return p.getInt("aesBits", 256); }

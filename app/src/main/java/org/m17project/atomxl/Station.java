@@ -337,7 +337,7 @@ final class Station implements Radio.Events, Audio.Sink {
             for (int i = 0; i < coef.length; i++) coef[i] = Float.parseFloat(lines[i]);
             org.m17project.atomxl.dfe.M17Receiver r = new org.m17project.atomxl.dfe.M17Receiver(coef, new org.m17project.atomxl.dfe.M17Receiver.Listener() {
                 @Override public void started(org.m17project.atomxl.dfe.M17.Lsf lsf) { }
-                @Override public void frame(org.m17project.atomxl.dfe.M17.Stream st, float q) { dfeQuality = q; }
+                @Override public void frame(org.m17project.atomxl.dfe.M17.Stream st, float q) { }
                 @Override public void lsfFromLich(org.m17project.atomxl.dfe.M17.Lsf lsf) { }
                 @Override public void ended(int frames, int good, String why) { log("equaliser: " + frames + " frames, " + good + " confirmed (" + why + ")"); }
             });
@@ -347,7 +347,6 @@ final class Station implements Radio.Events, Audio.Sink {
             dfe = r;
         } catch (Throwable t) { log("equaliser: " + t); }
     }
-    volatile float dfeQuality;
     /** Receive measurements on the equaliser (Bench › Receive signal, the main status line). */
     final RxStats rxStats = new RxStats();
     /** The receive scope (Bench) is on screen: the equaliser also runs free while no M17 signal is there. */

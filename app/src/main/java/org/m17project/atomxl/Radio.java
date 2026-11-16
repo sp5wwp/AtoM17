@@ -76,7 +76,6 @@ final class Radio implements Port.Listener {
     }
 
     void closePort() { stopReceptionWatch(); port.close(); }
-    void openPortOnly() throws IOException { port.open(); }
 
     // ---- raw access for the loader ----
     void startDivert() { port.startDivert(); }
@@ -165,11 +164,6 @@ final class Radio implements Port.Listener {
                 .put((byte) 2).put((byte) volume).put((byte) 2).put((byte) 2);
         return set(CMD_ANALOG, b.array());
     }
-
-    boolean setSquelch(int level) throws IOException { return set(CMD_SQUELCH, (byte) Math.max(0, Math.min(9, level))); }
-    boolean setVolume(int v) throws IOException { return set(CMD_VOLUME, (byte) v); }
-    /** 0 = the module's own timer off. Its start-up value is 120 s. */
-    boolean setTot(int seconds) throws IOException { set(CMD_TOT, (byte) Math.max(0, Math.min(255, seconds))); return true; }   // V076 answers status 1 in both branches
 
     /** FM key: the bridge's PTT line (the HAL's startPtt / stopPtt), never 0x26. */
     void fmPtt(boolean down) throws IOException { Bridge.ptt(down); }
