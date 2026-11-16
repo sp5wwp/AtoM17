@@ -106,8 +106,6 @@ int m17_resampler_run(m17_resampler_t *r, const float *x, int n, float *y, int m
         while (out < max)
         {
             int i = (int)floor(r->t);
-            if (i + r->half + 1 > r->in_len)
-                break;
             double mu = r->t - i;
             int p = (int)(mu * r->phases + 0.5);
             int base = i - (r->half - 1);
@@ -116,6 +114,8 @@ int m17_resampler_run(m17_resampler_t *r, const float *x, int n, float *y, int m
                 p = 0;
                 base++;
             }
+            if (base + len > r->in_len) /* the whole kernel, after the rounding, must be in the input */
+                break;
             const float *row = &r->table[(size_t)p * len];
             const float *xin = &r->in[base];
             float acc = 0.0f;
