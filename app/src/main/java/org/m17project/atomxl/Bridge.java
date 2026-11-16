@@ -24,6 +24,8 @@ final class Bridge {
     /** The stock app flashes any .bin here into the module at its start. AtoM17 never writes there. */
     static final String STOCK_FIRMWARE_DIR = "/sdcard/intercom/dmr";
 
+    /** The port belongs to AtoM17 alone: the SELinux rule (Root.POLICY) has to admit every app, the owner and mode do not. */
+    private static final String OWN_PORT = "chown " + android.os.Process.myUid() + " " + PORT + "; chmod 0600 " + PORT + "; ";
     private static final String STTY = "S=stty; [ -x /data/adb/magisk/busybox ] && S='/data/adb/magisk/busybox stty'; ";
     private static final String STALE_PORT_GONE = "k=0; while [ -e " + PORT + " ] && [ $k -lt 25 ]; do sleep 0.2; k=$((k+1)); done; "
             + "[ -e " + PORT + " ] && echo 'stale port still there'; ";
@@ -50,7 +52,7 @@ final class Bridge {
         String out = Root.power(STTY + "stop " + HAL + "; sleep 0.5; "
                 + "case \"$(cat " + MCU_POWER + ")\" in *'= 1'*) echo 'was powered: off first'; " + RESET + ";; esac; "
                 + POWER_UP
-                + "if [ -e " + PORT + " ]; then sleep 2; chmod 0666 " + PORT + "; $S -F " + PORT + " 115200 raw -echo 2>&1; echo 1 > " + HANDLE_PTT + "; "
+                + "if [ -e " + PORT + " ]; then sleep 2; " + OWN_PORT + "$S -F " + PORT + " 115200 raw -echo 2>&1; echo 1 > " + HANDLE_PTT + "; "
                 + "echo \"port: after $((i*5)) tenths of a second\"; else echo 'port: none'; " + POWER_DOWN + "fi");
         if (!out.contains("port: after")) throw new IOException("the radio's USB bridge did not appear (" + out.replace('\n', ' ').trim() + "); the radio is off again"
                 + (out.contains(NOTHING_ATTACHED) ? ". Nothing attached to USB at all: restart the phone." : ""));
@@ -63,7 +65,7 @@ final class Bridge {
                 + "echo 0 > " + MCU_POWER + "; " + STALE_PORT_GONE + "sleep 0.3; echo 0 > " + USB_PATH + "; sleep 0.5; "
                 + ONE_POWER_UP
                 + "i=0; while ! $S -F " + PORT + " -g >/dev/null 2>&1 && [ $i -lt 30 ]; do sleep 0.5; i=$((i+1)); done; "
-                + "if $S -F " + PORT + " -g >/dev/null 2>&1; then chmod 0666 " + PORT + "; $S -F " + PORT + " 115200 raw -echo 2>&1; "
+                + "if $S -F " + PORT + " -g >/dev/null 2>&1; then " + OWN_PORT + "$S -F " + PORT + " 115200 raw -echo 2>&1; "
                 + "echo \"tty: after $((i*5)) tenths of a second, PTT held\"; else echo 'tty: none'; echo 1 > " + HANDLE_PTT + "; " + POWER_DOWN + "fi");
         if (!out.contains("tty: after")) throw new IOException("the bridge did not come up as a tty (" + out.replace('\n', ' ').trim() + "); PTT released, the radio is off again");
         return "loader bridge up: " + out.replace('\n', ' ').trim();

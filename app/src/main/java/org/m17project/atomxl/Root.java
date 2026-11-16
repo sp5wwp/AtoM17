@@ -38,7 +38,11 @@ public final class Root {
 
     public static boolean available() { return run("id").contains("uid=0"); }
 
-    /** The Atom XL's policy lines (SignalDeck's profile): the app may open the bridge's tty and the reception line. */
+    /**
+     * The Atom XL's policy lines (SignalDeck's profile): the app may open the bridge's tty and the reception line.
+     * All apps share the untrusted_app domain, so these admit every app. Bridge makes the tty AtoM17's own (owner and
+     * mode 0600), which keeps the others out of it.
+     */
     static final String[] POLICY = {
             "allow untrusted_app ttyACM_device chr_file { open read write ioctl getattr lock }",
             "typeattribute ttyACM_device mlstrustedobject",
