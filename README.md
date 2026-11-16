@@ -33,7 +33,7 @@ SignalDeck.
   phone from its own `/vendor/data/dmr/DMR006.U4A.V076.bin`. The APK carries only patches (`assets/*.patch.json`). The
   P1 loader bridge is built the same way from `/vendor/data/mcu/20201016161541.bin`.
 
-Libraries: libm17 (`3684edc`), Codec2-mod `split-no-doubles` (`1e5d642`), micro-ecc (M17 fork), tinier-aes, libm17rx
+Libraries: libm17 1.4.3 (`49c3010`), Codec2-mod `split-no-doubles` (`1e5d642`), micro-ecc (M17 fork), tinier-aes, libm17rx
 from `m17_sdrsharp` (`10be6e8`). The TX encoder (`app/src/main/cpp/m17tx.c`) follows gr-m17's `m17_coder`.
 
 ## Build
