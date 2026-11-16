@@ -68,6 +68,25 @@ final class Station implements Radio.Events, Audio.Sink {
     private final StringBuilder logBuf = new StringBuilder();
 
     private volatile boolean open, starting, flashing, transmitting, receiving;
+    /** Guards taking the transmitter or the firmware loader: check and set in one step. */
+    private final Object claim = new Object();
+
+    /** Why the transmit frequency must not be used, or null: outside the module's range or the region's 70 cm band. */
+    String txBandProblem() {
+        int tx = cfg.txFreq(), r = cfg.region();
+        if (!Config.tunable(tx)) return "TX " + Config.mhz(tx) + " MHz is outside the radio's " + Config.rangeText() + " range";
+        if (!Config.inBand(tx, r)) return "TX " + Config.mhz(tx) + " MHz is outside the 70 cm band of IARU Region " + r;
+        return null;
+    }
+
+    /** The transmitter, when the radio is on and idle: true when it is now taken (transmitting set). */
+    private boolean claimTx() {
+        synchronized (claim) {
+            if (!open || flashing || transmitting) return false;
+            transmitting = true;
+            return true;
+        }
+    }
     private volatile String moduleTag = "", bridgeDate = "", error = "";
     private volatile int caps;
     volatile String appBlock;
@@ -159,6 +178,7 @@ final class Station implements Radio.Events, Audio.Sink {
                 log("start: " + t);
                 try { radio.shutdown(); } catch (Throwable ignored) { }
                 open = false;
+                RadioService.stop(ctx);                                   // its stop() hands USB routing and the stock app back
             } finally {
                 starting = false; state();
                 evalCapture();
@@ -166,26 +186,37 @@ final class Station implements Radio.Events, Audio.Sink {
         });
     }
 
-    void stop() {
+    void stop() { stop(null); }
+
+    /** Radio off on the worker, {@code done} (may be null) runs when it is off and everything is handed back. */
+    void stop(Runnable done) {
         if (open || starting) { stopping = true; state(); }
         worker.execute(() -> {
-            pttHeld = false;
-            pttKey.stop();
-            updateGnss();
-            if (audio != null) { audio.stopCapture(); audio.stopPlayback(); }
-            if (open) radio.shutdown();
-            open = false; receiving = false;
-            updateGnss();
-            Bridge.usbRoutingRestore(usbRoutingPrev);
-            // the stock app reflashes the bridge when its version query goes unanswered: hand it back only when the bridge
-            // was last seen answering with the stock build (SignalDeck's hand-back rule)
-            if (Flasher.STOCK_BRIDGE_DATE.equals(bridgeDate) && !moduleTag.isEmpty()) log("stock app: " + Bridge.stockAppOn());
-            else log("stock app stays disabled (bridge " + bridgeDate + ", module " + moduleTag + "): restart the phone, start and stop AtoM17 once, or enable it by hand (pm enable " + Bridge.STOCK_APP + ")");
-            String pending = Bridge.pendingStockFirmware();
-            if (pending != null) log("WARNING: the stock app would load into the module at its start: " + pending);
-            stopping = false;
-            state();
+            try { teardown(); }
+            finally {
+                stopping = false;
+                state();
+                if (done != null) done.run();
+            }
         });
+    }
+
+    /** On the worker: radio off, USB routing, the stock app and the PTT key handed back. */
+    private void teardown() {
+        pttHeld = false;
+        pttKey.stop();
+        updateGnss();
+        if (audio != null) { audio.stopCapture(); audio.stopPlayback(); }
+        if (open) radio.shutdown();
+        open = false; receiving = false;
+        updateGnss();
+        Bridge.usbRoutingRestore(usbRoutingPrev);
+        // the stock app reflashes the bridge when its version query goes unanswered: hand it back only when the bridge
+        // was last seen answering with the stock build (SignalDeck's hand-back rule)
+        if (Flasher.STOCK_BRIDGE_DATE.equals(bridgeDate) && !moduleTag.isEmpty()) log("stock app: " + Bridge.stockAppOn());
+        else log("stock app stays disabled (bridge " + bridgeDate + ", module " + moduleTag + "): restart the phone, start and stop AtoM17 once, or enable it by hand (pm enable " + Bridge.STOCK_APP + ")");
+        String pending = Bridge.pendingStockFirmware();
+        if (pending != null) log("WARNING: the stock app would load into the module at its start: " + pending);
     }
 
     private void identify() throws IOException {
@@ -528,12 +559,15 @@ final class Station implements Radio.Events, Audio.Sink {
     /** Push to talk: FM through the PTT line and the USB playback; M17 through the V076J symbol engine. */
     void ptt(boolean down) {
         if (!down) { pttHeld = false; return; }
-        if (!open || flashing || transmitting) return;
+        if (!open || flashing || transmitting) return;                // quick exit, claimTx() decides
         if (cfg.m17() && !m17TxCapable()) { log("M17 transmit needs V076J (Settings › Module firmware); the module answers " + moduleTag); return; }
         if (cfg.m17() && cfg.src().trim().isEmpty()) { log("set your callsign first (Settings › Station and META)"); return; }
+        String band = txBandProblem();
+        if (band != null) { log(band + ": not transmitting"); return; }
+        if (!claimTx()) return;
         pttHeld = true;
         txSince = System.currentTimeMillis(); txKind = cfg.m17() ? "M17 voice" : "FM"; txLevelDb = -90;
-        transmitting = true; state();
+        state();
         Thread t = new Thread(cfg.m17() ? this::m17VoiceRun : this::fmRun, "tx");
         t.setPriority(Thread.MAX_PRIORITY);
         txThread = t;
@@ -576,7 +610,7 @@ final class Station implements Radio.Events, Audio.Sink {
             rec = mic(256);
             if (rec == null) { log("no microphone (permission?)"); return; }
             log(audio.startPlayback());
-            radio.fmPtt(true); keyed = true;
+            keyed = true; radio.fmPtt(true);                   // keyed first: a half-done key is unkeyed too
             log("FM key");
             short[] in = new short[256], out = new short[256 * 4 * 2];
             short prev = 0;
@@ -599,7 +633,7 @@ final class Station implements Radio.Events, Audio.Sink {
         finally {
             if (rec != null) { try { rec.stop(); } catch (Throwable ignored) { } rec.release(); }
             if (audio != null) log(audio.stopPlayback());
-            if (keyed) try { radio.fmPtt(false); log("FM unkey"); } catch (Throwable t) { log("unkey: " + t); }
+            if (keyed && unkey(true)) log("FM unkey");
             transmitting = false; state();
             worker.execute(this::evalCapture);
         }
@@ -760,11 +794,11 @@ final class Station implements Radio.Events, Audio.Sink {
                 int fill = chunk(c, 0, 48, false);
                 if (fill < 0) return false;
                 sent += n;
-                if (!keyed && sent / 48 >= KEY_AFTER_CHUNKS) { radio.symbolKey(true); keyed = true; }
+                if (!keyed && sent / 48 >= KEY_AFTER_CHUNKS) { keyed = true; radio.symbolKey(true); }
                 pace(fill, keyed);
             }
             if (last) {
-                if (!keyed) { radio.symbolKey(true); keyed = true; }       // a short transmission (an SMS): all of it is queued, now play it
+                if (!keyed) { keyed = true; radio.symbolKey(true); }       // a short transmission (an SMS): all of it is queued, now play it
                 drainTo(DRAIN_TO_SYMBOLS);
                 endFill = chunk(EOT_CHUNK, 0, 48, true);
                 if (endFill < 0) return false;
@@ -847,13 +881,29 @@ final class Station implements Radio.Events, Audio.Sink {
         finally { testTone = null; m17Finish(rec, s.keyed, s.endFill); }
     }
 
+    /**
+     * Unkey (the FM PTT line or the symbol engine), tried three times, then a bridge power cycle as the last resort:
+     * the transmitter must never stay on. True when the first tries worked.
+     */
+    private boolean unkey(boolean fm) {
+        for (int i = 0; i < 3; i++) {
+            try { if (fm) radio.fmPtt(false); else radio.symbolKey(false); return true; }
+            catch (Throwable t) { log("unkey: " + t); }
+            try { Thread.sleep(100); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
+        log("unkey failed three times: power-cycling the bridge");
+        try { radio.powerCycle(); applyChannelNow(); } catch (Throwable t) { log("power cycle: " + t); }
+        return false;
+    }
+
     private void m17Finish(AudioRecord rec, boolean keyed, int endFill) {
         if (rec != null) { try { rec.stop(); } catch (Throwable ignored) { } rec.release(); }
         if (keyed) {
             // unkey once what op 7 left in the ring (the EoT padding and a little) has played: a fixed hang left an unmodulated
             // carrier at the end (SDR, 2026-11-06)
             long hang = endFill >= 0 ? Math.max(40, endFill * 1000L / 4800 + 20) : SYM_DRAIN_MS;
-            try { Thread.sleep(hang); radio.symbolKey(false); log("unkey after " + hang + " ms"); } catch (Throwable t) { log("unkey: " + t); }
+            try { Thread.sleep(hang); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+            if (unkey(false)) log("unkey after " + hang + " ms");
             // after a symbol key the module leaves its receive audio muted until a channel write (SD bench 2026-10-27)
             try { applyChannelNow(); } catch (Throwable t) { log("rx after tx: " + t); }
         }
@@ -879,9 +929,12 @@ final class Station implements Radio.Events, Audio.Sink {
         if (cfg.src().trim().isEmpty()) return "set your callsign first";
         short[] t = new short[8000 * 10];
         for (int i = 0; i < t.length; i++) t[i] = (short) (8000 * Math.sin(2 * Math.PI * 1000 * i / 8000.0));
+        String band = txBandProblem();
+        if (band != null) return band;
+        if (!claimTx()) return "the radio is busy or off";
         testTone = t;
         txSince = System.currentTimeMillis(); txKind = "M17 test tone"; txLevelDb = -90;
-        transmitting = true; state();
+        state();
         Thread th = new Thread(this::m17VoiceRun, "tx-test");
         th.setPriority(Thread.MAX_PRIORITY);
         th.start();
@@ -896,10 +949,13 @@ final class Station implements Radio.Events, Audio.Sink {
         byte[] t = text.getBytes(StandardCharsets.UTF_8);
         if (t.length > 821) return "at most 821 bytes";
         String to0 = dst == null || dst.isEmpty() ? cfg.dst() : dst;
+        String band = txBandProblem();
+        if (band != null) return band;
+        if (!claimTx()) return "the radio is busy or off";              // before configureTx: the encoder is shared
         String bad = configureTx(to0, true);
-        if (bad != null) return bad;
+        if (bad != null) { transmitting = false; state(); return bad; }
         txSince = System.currentTimeMillis(); txKind = "M17 SMS"; txLevelDb = -90;
-        transmitting = true; state();
+        state();
         boolean fm = !cfg.m17();
         Thread th = new Thread(() -> {
             SymStream s = new SymStream();
@@ -927,8 +983,12 @@ final class Station implements Radio.Events, Audio.Sink {
     // ---- firmware ----
 
     void flash(boolean restore, Flasher.Ui fui) {
-        if (flashing || transmitting || starting) { fui.log("busy"); return; }
-        flashing = true; state();
+        synchronized (claim) {
+            if (flashing || transmitting || starting || stopping) { fui.log("busy"); return; }
+            flashing = true;
+        }
+        state();
+        final boolean wasOpen = open;
         worker.execute(() -> {
             android.os.PowerManager.WakeLock lock = ((android.os.PowerManager) ctx.getSystemService(Context.POWER_SERVICE)).newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "atom17:firmware");
             lock.acquire(30 * 60 * 1000L);
@@ -952,10 +1012,12 @@ final class Station implements Radio.Events, Audio.Sink {
                 log("firmware: " + result);
                 fui.log(result);
                 open = radio.isOpen();
-                if (open) { identify(); applyChannelNow(); }
+                if (open && wasOpen) { identify(); applyChannelNow(); }
             } catch (Throwable t) { log("firmware: " + t); fui.log("error: " + t); }
             finally {
                 Bridge.pttIdle();
+                if (!wasOpen) { open = radio.isOpen(); teardown(); }       // the radio was off: off again, all handed back
+                else if (!radio.isOpen()) { open = false; RadioService.stop(ctx); }   // it stayed off: so does the service
                 if (lock.isHeld()) lock.release();
                 flashing = false; state();
                 fui.phase("done");

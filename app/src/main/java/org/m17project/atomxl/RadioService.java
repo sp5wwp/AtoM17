@@ -36,15 +36,20 @@ public final class RadioService extends Service {
         startForeground(17, n);
         lock = ((PowerManager) getSystemService(POWER_SERVICE)).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "atom17:radio");
         lock.acquire();
-        Station.get(this).start();
     }
 
-    @Override public int onStartCommand(Intent intent, int flags, int startId) { return START_NOT_STICKY; }
+    /** Every start request (each Start press) tries again: start() does nothing while the radio is on or starting. */
+    @Override public int onStartCommand(Intent intent, int flags, int startId) {
+        Station.get(this).start();
+        return START_NOT_STICKY;
+    }
 
     @Override public void onDestroy() {
         Station s = Station.peek();
-        if (s != null) s.stop();
-        if (lock != null && lock.isHeld()) lock.release();
+        PowerManager.WakeLock l = lock;
+        Runnable release = () -> { if (l != null && l.isHeld()) l.release(); };
+        if (s != null) s.stop(release);                                   // the lock holds until the radio is really off
+        else release.run();
         super.onDestroy();
     }
 
