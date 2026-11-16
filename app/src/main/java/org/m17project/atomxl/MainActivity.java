@@ -134,6 +134,7 @@ public final class MainActivity extends Activity implements Station.Listener {
         memCard.addView(next, new LinearLayout.LayoutParams(Ui.dp(this, 36), ViewGroup.LayoutParams.MATCH_PARENT));
         freqBox.addView(memCard, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         freq.setHz(cfg.freq());
+        freq.setStep(cfg.step());
         freq.setOnChange(hz -> { cfg.edit().putInt("freq", hz).apply(); st.applyChannel(); });
         freq.setOnLongClickListener(v -> { typeFrequency(); return true; });
 
@@ -194,6 +195,7 @@ public final class MainActivity extends Activity implements Station.Listener {
         super.onResume();
         st.addListener(this);
         freq.setHz(cfg.freq());
+        freq.setStep(cfg.step());                                       // Settings may have changed it
         onState(); rebuildHeard(); rebuildInbox(); st.updateGnss();
         ui.post(tick);
     }

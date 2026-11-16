@@ -1,6 +1,8 @@
 /*
  * AtoM17 - frequency display and tuner, SDR#-style: tap the upper half of a digit to step it up, the lower half to
- * step it down; drag up or down over a digit to tune with it; long press to type a frequency.
+ * step it down; drag up or down over a digit to tune with it; long press to type a frequency. A digit finer than the
+ * tuning step (Settings) moves to the next frequency on the step's grid instead, so 1 kHz taps with a 12.5 kHz step
+ * go 433.475, 433.4875, 433.500. TalkBack reads the frequency, its scroll actions tune by one step.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 package org.m17project.atomxl;
@@ -16,6 +18,7 @@ final class FreqView extends View {
     interface OnChange { void changed(int hz); }
 
     private int hz = 433_475_000;
+    private int stepHz = 12_500;
     private OnChange listener;
     private final Paint digit = new Paint(Paint.ANTI_ALIAS_FLAG), dim = new Paint(Paint.ANTI_ALIAS_FLAG), mark = new Paint(Paint.ANTI_ALIAS_FLAG);
     /** 9 digits: 100 MHz … 1 Hz, drawn as 433.475.000 */
@@ -33,11 +36,16 @@ final class FreqView extends View {
         dim.setTypeface(mono); dim.setColor(0xFF8FA9BF); dim.setTextAlign(Paint.Align.CENTER);
         mark.setColor(0x55F59A23);
         setLongClickable(true);
-        setContentDescription("Frequency");
+        setFocusable(true);
+        describe();
     }
 
     void setOnChange(OnChange l) { listener = l; }
-    void setHz(int v) { hz = clamp(v); invalidate(); }
+    void setHz(int v) { hz = clamp(v); describe(); invalidate(); }
+    /** The tuning step in Hz (Settings, Tuning). */
+    void setStep(int v) { stepHz = Math.max(1, v); }
+
+    private void describe() { setContentDescription("Frequency " + Config.mhz(hz) + " megahertz"); }
     int hz() { return hz; }
 
     private static int clamp(int v) { return Math.max(Config.MIN_HZ, Math.min(Config.MAX_HZ, v)); }
@@ -77,8 +85,33 @@ final class FreqView extends View {
     private static int pow10(int digitIndex) { int p = 1; for (int k = 0; k < DIGITS - 1 - digitIndex; k++) p *= 10; return p; }
 
     private void step(int digitIndex, int dir) {
-        int v = clamp(hz + dir * pow10(digitIndex));
-        if (v != hz) { hz = v; invalidate(); if (listener != null) listener.changed(hz); }
+        int w = pow10(digitIndex);
+        set(w >= stepHz ? hz + dir * w : onGrid(dir));
+    }
+
+    /** The next frequency on the step's grid above ({@code dir} 1) or below (-1) the current one. */
+    private int onGrid(int dir) {
+        long k = Math.floorDiv((long) hz, stepHz);
+        long v = dir > 0 ? (k + 1) * stepHz : (hz % stepHz == 0 ? k - 1 : k) * stepHz;
+        return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, v));
+    }
+
+    private void set(int v) {
+        v = clamp(v);
+        if (v != hz) { hz = v; describe(); invalidate(); if (listener != null) listener.changed(hz); }
+    }
+
+    @Override public void onInitializeAccessibilityNodeInfo(android.view.accessibility.AccessibilityNodeInfo info) {
+        super.onInitializeAccessibilityNodeInfo(info);
+        info.setScrollable(true);
+        info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD);
+        info.addAction(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD);
+    }
+
+    @Override public boolean performAccessibilityAction(int action, android.os.Bundle args) {
+        if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_SCROLL_FORWARD) { set(onGrid(1)); announceForAccessibility(getContentDescription()); return true; }
+        if (action == android.view.accessibility.AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD) { set(onGrid(-1)); announceForAccessibility(getContentDescription()); return true; }
+        return super.performAccessibilityAction(action, args);
     }
 
     @Override public boolean onTouchEvent(MotionEvent e) {
