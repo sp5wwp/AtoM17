@@ -104,10 +104,10 @@ public final class SettingsPageActivity extends Activity implements Station.List
     @Override public void onStatus(org.json.JSONObject s) {
         showSignal();
         TextView d = findViewById(R.id.dspLoad);
-        if (d != null && "bench".equals(page)) d.setText(Float.isNaN(st.dspLoad) ? "—" : String.format(Locale.US, "%.1f %% of a core", st.dspLoad));
+        if (d != null && "bench".equals(page)) d.setText(Float.isNaN(st.dspLoad) ? "\u2014" : String.format(Locale.US, "%.1f %% of a core", st.dspLoad));
     }
 
-    // ---- Diagnostics › Receive signal ----
+    // ---- Diagnostics > Receive signal ----
 
     private TextView[] sigVal;
     private ScopeView eye, hist, history;
@@ -236,7 +236,7 @@ public final class SettingsPageActivity extends Activity implements Station.List
                 + String.format(Locale.US, "   (correction %+.0f Hz at %s MHz)", -cfg.freq() * ppm * 1e-6, Config.mhz(cfg.freq())).replace("correction -0 Hz", "no correction").replace("correction +0 Hz", "no correction"));
     }
 
-    // ---- Diagnostics › Microphone gain and voice check ----
+    // ---- Diagnostics > Microphone gain and voice check ----
 
     private short[] voice;
     private int voiceRate = 8000;

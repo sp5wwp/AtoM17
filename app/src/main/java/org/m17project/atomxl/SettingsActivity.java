@@ -84,7 +84,7 @@ public final class SettingsActivity extends Activity {
                         + (tag.endsWith("V076X") ? String.format(Locale.US, " · deviation ×%.3f", cfg.devGainLoaded()) : ""), () -> startActivity(new Intent(this, FirmwareActivity.class))),
                 new Row("Diagnostics", "Receive signal \u00b7 microphone gain and voice check \u00b7 test tone \u00b7 recording \u00b7 processing load", page("bench", "Diagnostics")),
                 new Row("Screen", new String[] { "Screen: phone timeout", "Screen: on while active", "Screen: always on" }[Math.max(0, Math.min(2, cfg.p.getInt("screenOn", 1)))]
-                        + " · " + new String[] { "never woken", "woken for messages", "woken for calls and messages" }[Math.max(0, Math.min(2, cfg.p.getInt("wakeFor", 1)))], page("screen", "Screen")),
+                        + " \u00b7 " + new String[] { "never woken", "woken for messages", "woken for calls and messages" }[Math.max(0, Math.min(2, cfg.p.getInt("wakeFor", 1)))], page("screen", "Screen")),
                 new Row("Backup and restore", "Settings, keys, memories and messages in one file", this::backup),
                 new Row("Log", "What the radio and the decoder did", this::showLog),
                 new Row("About", "AtoM17 " + BuildConfig.VERSION_NAME + " · SP5WWP, M17 Foundation", page("about", "About")));

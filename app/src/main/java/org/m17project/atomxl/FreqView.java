@@ -1,6 +1,6 @@
 /*
  * AtoM17 - frequency display and tuner, SDR#-style: tap the upper half of a digit to step it up, the lower half to
- * step it down; drag up or down over a digit to tune with it; long press to type a frequency. A digit finer than the
+ * step it down, drag up or down over a digit to tune with it, long press to type a frequency. A digit finer than the
  * tuning step (Settings) moves to the next frequency on the step's grid instead, so 1 kHz taps with a 12.5 kHz step
  * go 433.475, 433.4875, 433.500. TalkBack reads the frequency, its scroll actions tune by one step.
  * SPDX-License-Identifier: GPL-3.0-or-later

@@ -89,7 +89,7 @@ public final class FirmwareActivity extends Activity {
         root.addView(sv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
         setContentView(page);
 
-        info.setText(INFO + "\n\nChecking the phone's files…");
+        info.setText(INFO + "\n\nChecking the phone's files\u2026");
         new Thread(this::check, "fw-check").start();
 
         load.setOnClickListener(v -> confirm(false));

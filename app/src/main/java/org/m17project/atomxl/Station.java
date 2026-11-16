@@ -353,7 +353,7 @@ final class Station implements Radio.Events, Audio.Sink {
             dfe = r;
         } catch (Throwable t) { log("equaliser: " + t); }
     }
-    /** Receive measurements on the equaliser (Diagnostics › Receive signal, the main status line). */
+    /** Receive measurements on the equaliser (Diagnostics > Receive signal, the main status line). */
     final RxStats rxStats = new RxStats();
     /** The receive scope (Diagnostics) is on screen: the equaliser also runs free while no M17 signal is there. */
     void setScope(boolean on) { scopeOn = on; org.m17project.atomxl.dfe.M17Receiver r = dfe; if (r != null) r.scope = on; }
@@ -578,7 +578,7 @@ final class Station implements Radio.Events, Audio.Sink {
         t.start();
     }
 
-    /** Light the screen for a few seconds (Settings › Screen: wake for messages, or calls and messages). */
+    /** Light the screen for a few seconds (Settings > Screen: wake for messages, or calls and messages). */
     @SuppressWarnings("deprecation")
     private void wakeScreen() {
         try {
@@ -590,7 +590,7 @@ final class Station implements Radio.Events, Audio.Sink {
         } catch (Throwable t) { log("wake: " + t.getMessage()); }
     }
 
-    /** Microphone gain, Settings › Diagnostics › Microphone gain and voice check (dB). */
+    /** Microphone gain, Settings > Diagnostics > Microphone gain and voice check (dB). */
     float micGain() { return (float) Math.pow(10, cfg.p.getInt("micGainDb", 0) / 20.0); }
     static void gain(short[] p, int n, float g) {
         if (g == 1f) return;

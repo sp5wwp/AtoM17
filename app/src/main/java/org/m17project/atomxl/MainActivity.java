@@ -532,7 +532,7 @@ public final class MainActivity extends Activity implements Station.Listener {
     private void updateSignal() {
         int color; String s;
         if (!st.isOpen()) { color = Ui.IDLE; s = st.isStarting() ? "Starting the radio\u2026" : ""; }
-        else if (st.isTransmitting()) { color = Ui.TX_TEXT; s = "Transmitting · " + Config.mhz(cfg.txFreq()) + " MHz" + (cfg.shift() != 0 ? " (" + Config.shiftText(cfg.shift(), cfg.offset()) + ")" : "") + " · " + (cfg.high() ? "high" : "low") + " power"; }
+        else if (st.isTransmitting()) { color = Ui.TX_TEXT; s = "Transmitting \u00b7 " + Config.mhz(cfg.txFreq()) + " MHz" + (cfg.shift() != 0 ? " (" + Config.shiftText(cfg.shift(), cfg.offset()) + ")" : "") + " \u00b7 " + (cfg.high() ? "high" : "low") + " power"; }
         else if (!cfg.m17()) { boolean o = st.isReceiving(); color = o ? Ui.OK : Ui.IDLE; s = o ? "Carrier · squelch open" : "Squelch closed"; }
         else {
             int state = lastStatus == null ? 0 : lastStatus.optInt("state");
@@ -676,7 +676,7 @@ public final class MainActivity extends Activity implements Station.Listener {
     private long activeUntil;
     private boolean keptOn;
 
-    /** Keep the screen on as Settings › Screen says: always, never, or while something is on the air (+10 s). */
+    /** Keep the screen on as Settings > Screen says: always, never, or while something is on the air (+10 s). */
     private void screenOn() {
         int how = cfg.p.getInt("screenOn", 1);                       // 0 never, 1 while active, 2 always
         boolean active = st.isTransmitting() || st.isStarting() || st.isFlashing()
