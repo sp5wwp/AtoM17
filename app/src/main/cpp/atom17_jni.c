@@ -11,7 +11,6 @@
 #include "m17rx.h"
 #include "m17tx.h"
 #include "m17.h"
-#include "m17agc.h"
 #include "m17resynth.h"
 #include "codec2_mod.h"
 #include "c2fargan.h"
@@ -23,14 +22,8 @@
 typedef struct
 {
     m17rx_t* rx;
-    /* AGC: the radio's USB audio is in counts, the core wants Hz (it decodes only within ~0.3x..2x of true Hz) */
-    m17agc_t agc;
-    m17resynth_t rs;
+    m17resynth_t rs;                                   /* the DFE's symbols back to 48 kHz for the core */
     float syn[1920];
-    int agc_on;
-    float fixed_gain;
-    float* buf;
-    int buf_n;
 } rxh_t;
 
 JNIEXPORT jlong JNICALL JF(rxCreate)(JNIEnv* env, jclass c, jdouble rate)
@@ -40,10 +33,7 @@ JNIEXPORT jlong JNICALL JF(rxCreate)(JNIEnv* env, jclass c, jdouble rate)
     h->rx = m17rx_create();
     if (!h->rx) { free(h); return 0; }
     m17rx_set_input_rate(h->rx, rate);
-    m17agc_init(&h->agc);
     m17resynth_init(&h->rs);
-    h->agc_on = 1;
-    h->fixed_gain = 0.1f;
     return (jlong)(intptr_t)h;
 }
 
@@ -52,7 +42,6 @@ JNIEXPORT void JNICALL JF(rxDestroy)(JNIEnv* env, jclass c, jlong p)
     rxh_t* h = (rxh_t*)(intptr_t)p;
     if (!h) return;
     m17rx_destroy(h->rx);
-    free(h->buf);
     free(h);
 }
 
@@ -62,7 +51,7 @@ JNIEXPORT void JNICALL JF(rxReset)(JNIEnv* env, jclass c, jlong p)
     if (h) m17rx_reset(h->rx);
 }
 
-JNIEXPORT void JNICALL JF(rxConfig)(JNIEnv* env, jclass c, jlong p, jboolean invert, jboolean agc, jfloat fixedGain)
+JNIEXPORT void JNICALL JF(rxConfig)(JNIEnv* env, jclass c, jlong p, jboolean invert)
 {
     rxh_t* h = (rxh_t*)(intptr_t)p;
     if (!h) return;
@@ -70,29 +59,6 @@ JNIEXPORT void JNICALL JF(rxConfig)(JNIEnv* env, jclass c, jlong p, jboolean inv
     m17rx_default_config(&cfg);
     cfg.invert = invert ? 1 : 0;
     m17rx_set_config(h->rx, &cfg);
-    h->agc_on = agc ? 1 : 0;
-    if (fixedGain > 0) h->fixed_gain = fixedGain;
-}
-
-/* Interleaved S16 frames from the USB card: `channels` per frame, the M17 baseband taken from `ch`.
-   Returns the number of events waiting. */
-JNIEXPORT jint JNICALL JF(rxProcessPcm)(JNIEnv* env, jclass c, jlong p, jshortArray arr, jint frames, jint channels, jint ch)
-{
-    rxh_t* h = (rxh_t*)(intptr_t)p;
-    if (!h || frames <= 0) return 0;
-    if (h->buf_n < frames)
-    {
-        free(h->buf);
-        h->buf = malloc(sizeof(float) * (size_t)frames);
-        h->buf_n = h->buf ? frames : 0;
-        if (!h->buf) return 0;
-    }
-    jshort* s = (*env)->GetShortArrayElements(env, arr, NULL);
-    for (int i = 0; i < frames; i++) h->buf[i] = (float)s[i * channels + ch];
-    (*env)->ReleaseShortArrayElements(env, arr, s, JNI_ABORT);
-    if (h->agc_on) m17agc_run(&h->agc, h->buf, frames);
-    else { h->agc.gain = h->fixed_gain; for (int i = 0; i < frames; i++) h->buf[i] *= h->fixed_gain; }
-    return m17rx_process_fm(h->rx, h->buf, frames);
 }
 
 /* One frame (192) of equalised symbols from the DFE: re-synthesised at 48 kHz into the core (created at 48000). */
@@ -230,24 +196,13 @@ JNIEXPORT jstring JNICALL JF(rxStatus)(JNIEnv* env, jclass c, jlong p)
     int o = snprintf(b, sizeof b,
         "{\"state\":%d,\"locked\":%d,\"fn\":%d,\"frames\":%d,\"lost\":%d,\"duration\":%.2f,\"lich\":%d,\"measValid\":%d,"
         "\"evm\":%.2f,\"evmPeak\":%.2f,\"mer\":%.2f,\"ber\":%.5f,\"vber\":%.5f,\"eye\":%.1f,\"dev\":%.0f,\"ratio\":%.3f,"
-        "\"offset\":%.0f,\"ppm\":%.1f,\"sync\":%.3f,\"polarity\":%d,\"gain\":%.4f,\"link\":",
+        "\"offset\":%.0f,\"ppm\":%.1f,\"sync\":%.3f,\"polarity\":%d,\"link\":",
         st.state, st.locked, st.last_fn, st.frames, st.frames_lost, st.duration_s, st.lich_chunks, st.meas_valid,
         st.evm_rms_pct, st.evm_peak_pct, st.mer_db, st.ber_pre_fec, st.viterbi_ber, st.eye_opening_pct, st.deviation_hz,
-        st.inner_outer_ratio, st.freq_offset_hz, st.clock_ppm, st.sync_quality, st.polarity_hint, h->agc.gain);
+        st.inner_outer_ratio, st.freq_offset_hz, st.clock_ppm, st.sync_quality, st.polarity_hint);
     o += link_json(b + o, sizeof b - (size_t)o, &st.link);
     snprintf(b + o, sizeof b - (size_t)o, "}");
     return (*env)->NewStringUTF(env, b);
-}
-
-/* Eye traces after the RRC: up to `max` traces of 21 points, normalised to +-3. */
-JNIEXPORT jint JNICALL JF(rxEye)(JNIEnv* env, jclass c, jlong p, jfloatArray out, jint max)
-{
-    rxh_t* h = (rxh_t*)(intptr_t)p;
-    if (!h) return 0;
-    jfloat* f = (*env)->GetFloatArrayElements(env, out, NULL);
-    int n = m17rx_get_eye(h->rx, f, max);
-    (*env)->ReleaseFloatArrayElements(env, out, f, 0);
-    return n;
 }
 
 JNIEXPORT jint JNICALL JF(rxSetAes)(JNIEnv* env, jclass c, jlong p, jbyteArray key)

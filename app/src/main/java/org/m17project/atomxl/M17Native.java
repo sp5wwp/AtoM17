@@ -12,19 +12,17 @@ final class M17Native {
     static native long rxCreate(double rate);
     static native void rxDestroy(long h);
     static native void rxReset(long h);
-    static native void rxConfig(long h, boolean invert, boolean agc, float fixedGain);
+    static native void rxConfig(long h, boolean invert);
     /** Codec2-mod-neural (FARGAN) voice synthesis on or off; 0 = ok. The audio queue is emptied. */
     static native int rxSetNeural(long h, boolean on);
     /** Sample rate of what rxReadAudio returns: 8000, or 16000 with the neural decoder. */
     static native int rxAudioRate(long h);
     /** Voice check: 8 kHz speech through Codec2 3200 and back (FARGAN at 16 kHz with {@code neural}). */
     static native short[] c2Loopback(short[] pcm8k, boolean neural);
-    static native int rxProcessPcm(long h, short[] pcm, int frames, int channels, int ch);
     static native int rxPushSymbols(long h, float[] sym192);
     static native int rxReadAudio(long h, short[] out);
     static native String rxNextEvent(long h);
     static native String rxStatus(long h);
-    static native int rxEye(long h, float[] out, int maxTraces);
     static native int rxSetAes(long h, byte[] key);
     static native int rxSetScrambler(long h, int seed, int bits);
     static native void rxClearKeys(long h);

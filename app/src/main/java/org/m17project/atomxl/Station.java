@@ -474,7 +474,7 @@ final class Station implements Radio.Events, Audio.Sink {
             else log("M17 voice: the neural decoder could not be created (memory)");
             audioRate = M17Native.rxAudioRate(rxh);
         }
-        M17Native.rxConfig(rxh, false, true, 0.1f);          // the core sees re-synthesised symbols: polarity is set before the equaliser
+        M17Native.rxConfig(rxh, false);          // the core sees re-synthesised symbols: polarity is set before the equaliser
         byte[] k = M17Native.hex(cfg.rxAesKey());
         M17Native.rxSetAes(rxh, k != null && (k.length == 16 || k.length == 24 || k.length == 32) ? k : null);
         byte[] s = M17Native.hex(cfg.rxScramSeed());
@@ -489,7 +489,6 @@ final class Station implements Radio.Events, Audio.Sink {
         }
     }
 
-    int eye(float[] out, int max) { synchronized (rxLock) { return M17Native.rxEye(rxh, out, max); } }
 
     // ---- receive recorder: the equaliser's own input (8 kHz mono, left channel), for offline analysis ----
 
