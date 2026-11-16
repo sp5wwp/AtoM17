@@ -52,7 +52,7 @@ public final class MemoriesActivity extends Activity {
 
         Button store = new Button(this);
         store.setText("Store current channel");
-        store.setAllCaps(false); store.setTextColor(0xFF1B1206); store.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); store.setTextSize(15);
+        store.setAllCaps(false); store.setTextColor(Ui.ON_ORANGE); store.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); store.setTextSize(15);
         store.setBackgroundResource(R.drawable.btn_primary);
         store.setOnClickListener(v -> startActivity(new Intent(this, MemEditActivity.class).putExtra("index", -1).putExtra("current", true)));
         LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 48));

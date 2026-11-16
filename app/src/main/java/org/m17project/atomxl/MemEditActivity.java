@@ -143,7 +143,7 @@ public final class MemEditActivity extends Activity {
         if (index >= 0) {
             Button del = small("Delete");
             del.setBackgroundResource(R.drawable.btn_danger);
-            del.setTextColor(0xFFFFB3B5);
+            del.setTextColor(Ui.BAD);
             del.setOnClickListener(v -> new AlertDialog.Builder(this).setMessage("Delete memory " + (index + 1) + ", " + ch.name + "?")
                     .setPositiveButton("Delete", (d, w) -> {
                         List<Memories.Ch> l2 = mem.all();
@@ -160,7 +160,7 @@ public final class MemEditActivity extends Activity {
             bottom.addView(del, dl);
         }
         Button save = new Button(this);
-        save.setText("Save"); save.setAllCaps(false); save.setTextColor(0xFF1B1206); save.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); save.setTextSize(15);
+        save.setText("Save"); save.setAllCaps(false); save.setTextColor(Ui.ON_ORANGE); save.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); save.setTextSize(15);
         save.setBackgroundResource(R.drawable.btn_primary);
         save.setOnClickListener(v -> save());
         bottom.addView(save, new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1));

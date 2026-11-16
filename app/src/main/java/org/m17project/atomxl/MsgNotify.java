@@ -91,7 +91,7 @@ final class MsgNotify {
         ch.setSound(null, null);                                          // AtoM17 plays them (alert())
         ch.enableVibration(false);
         ch.enableLights(true);
-        ch.setLightColor(0xFFF59A23);
+        ch.setLightColor(Ui.ORANGE);
         nm.createNotificationChannel(ch);
     }
 
@@ -119,7 +119,7 @@ final class MsgNotify {
                 .setContentText(text)
                 .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setCategory(Notification.CATEGORY_MESSAGE)
-                .setColor(0xFFF59A23)
+                .setColor(Ui.ORANGE)
                 .setAutoCancel(true)
                 .setWhen(System.currentTimeMillis()).setShowWhen(true)
                 .setContentIntent(open);
@@ -154,7 +154,7 @@ final class MsgNotify {
             Station st = Station.get(c);
             String why = st.sendSms(to, text.toString());
             Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(c, CHANNEL) : new Notification.Builder(c);
-            b.setSmallIcon(R.drawable.ic_notify).setColor(0xFFF59A23).setAutoCancel(true).setOnlyAlertOnce(true)
+            b.setSmallIcon(R.drawable.ic_notify).setColor(Ui.ORANGE).setAutoCancel(true).setOnlyAlertOnce(true)
                     .setContentTitle(why == null ? "Sending to " + to : "Not sent to " + to)
                     .setContentText(why == null ? text : why);
             if (Build.VERSION.SDK_INT >= 26) b.setTimeoutAfter(why == null ? 8000 : 30000);

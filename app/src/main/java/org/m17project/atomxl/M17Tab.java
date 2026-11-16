@@ -218,7 +218,7 @@ final class M17Tab {
         msg.setHint("Message");
         if (text != null) msg.setText(text);
         TextView count = new TextView(a);
-        count.setTextColor(0xFF8A949E);
+        count.setTextColor(Ui.IDLE);
         count.setText("0 / 821 bytes");
         msg.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int x, int y, int z) { }

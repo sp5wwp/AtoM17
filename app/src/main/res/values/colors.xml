@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The palette. Ui.java holds the same values for views built in code: change both together.
+     Text colours reach 4.5:1 on a card over the lightest part of the background (bg_bottom). -->
+<resources>
+    <color name="bg_top">#132B41</color>
+    <color name="bg_mid">#1A3B57</color>
+    <color name="bg_bottom">#1F4A68</color>
+    <color name="nav_bar">#1F4A68</color>
+    <color name="white">#FFFFFF</color>
+    <color name="text2">#E4EDF5</color>
+    <color name="text3">#D3E0EB</color>
+    <color name="label">#C9D8E5</color>
+    <color name="idle">#C5D3DF</color>
+    <!-- orange: fills, bars and accents, and text near the top of the screen. orange_text: small text further down -->
+    <color name="orange">#F59A23</color>
+    <color name="orange_text">#FAC989</color>
+    <color name="on_orange">#1B1206</color>
+    <color name="ok">#7DF0B4</color>
+    <color name="warn">#FFCB6B</color>
+    <color name="bad">#FFC2C4</color>
+    <!-- transmit: the fill, its edge, and text -->
+    <color name="tx">#C2412B</color>
+    <color name="tx_edge">#E2654C</color>
+    <color name="tx_text">#FFC4B5</color>
+</resources>

@@ -18,8 +18,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 final class Ui {
-    static final int WHITE = 0xFFFFFFFF, TEXT2 = 0xFFE4EDF5, TEXT3 = 0xFFD3E0EB, LABEL = 0xFFC9D8E5,
-            ORANGE = 0xFFF59A23, OK = 0xFF7DF0B4, WARN = 0xFFFFCB6B, BAD = 0xFFFF9EA1, TX = 0xFFC2412B, IDLE = 0xFFA9BED0;
+    /** The palette, the same values as res/values/colors.xml: change both together. */
+    static final int WHITE = 0xFFFFFFFF, TEXT2 = 0xFFE4EDF5, TEXT3 = 0xFFD3E0EB, LABEL = 0xFFC9D8E5, IDLE = 0xFFC5D3DF,
+            ORANGE = 0xFFF59A23, ORANGE_TEXT = 0xFFFAC989, ON_ORANGE = 0xFF1B1206,
+            OK = 0xFF7DF0B4, WARN = 0xFFFFCB6B, BAD = 0xFFFFC2C4,
+            TX = 0xFFC2412B, TX_EDGE = 0xFFE2654C, TX_TEXT = 0xFFFFC4B5,
+            /** the frequency's dimmed digits: large text, 3:1 is enough */
+            DIM = 0xFF97AFC4;
     static final Typeface MONO = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL), MONO_B = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD);
 
     private Ui() { }

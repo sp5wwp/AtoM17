@@ -523,7 +523,7 @@ public final class MainActivity extends Activity implements Station.Listener {
 
     private android.graphics.drawable.Drawable txCard() {
         android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
-        d.setCornerRadius(Ui.dp(this, 16)); d.setColor(0x1CFFFFFF); d.setStroke(Ui.dp(this, 1), 0x8CFF785A);
+        d.setCornerRadius(Ui.dp(this, 16)); d.setColor(0x1CFFFFFF); d.setStroke(Ui.dp(this, 1), (Ui.TX_EDGE & 0x00FFFFFF) | 0x8C000000);
         return d;
     }
 
@@ -532,7 +532,7 @@ public final class MainActivity extends Activity implements Station.Listener {
     private void updateSignal() {
         int color; String s;
         if (!st.isOpen()) { color = Ui.IDLE; s = st.isStarting() ? "Starting the radio…" : "Radio off"; }
-        else if (st.isTransmitting()) { color = 0xFFFF8A6B; s = "Transmitting · " + Config.mhz(cfg.txFreq()) + " MHz" + (cfg.shift() != 0 ? " (" + Config.shiftText(cfg.shift(), cfg.offset()) + ")" : "") + " · " + (cfg.high() ? "high" : "low") + " power"; }
+        else if (st.isTransmitting()) { color = Ui.TX_TEXT; s = "Transmitting · " + Config.mhz(cfg.txFreq()) + " MHz" + (cfg.shift() != 0 ? " (" + Config.shiftText(cfg.shift(), cfg.offset()) + ")" : "") + " · " + (cfg.high() ? "high" : "low") + " power"; }
         else if (!cfg.m17()) { boolean o = st.isReceiving(); color = o ? Ui.OK : Ui.IDLE; s = o ? "Carrier · squelch open" : "Squelch closed"; }
         else {
             int state = lastStatus == null ? 0 : lastStatus.optInt("state");
@@ -590,11 +590,11 @@ public final class MainActivity extends Activity implements Station.Listener {
         }
         busyPopup();
         boolean m17 = cfg.m17();
-        modeFm.setBackgroundResource(m17 ? 0 : R.drawable.seg_on); modeFm.setTextColor(m17 ? Ui.TEXT3 : 0xFF1B1206);
-        modeM17.setBackgroundResource(m17 ? R.drawable.seg_on : 0); modeM17.setTextColor(m17 ? 0xFF1B1206 : Ui.TEXT3);
+        modeFm.setBackgroundResource(m17 ? 0 : R.drawable.seg_on); modeFm.setTextColor(m17 ? Ui.TEXT3 : Ui.ON_ORANGE);
+        modeM17.setBackgroundResource(m17 ? R.drawable.seg_on : 0); modeM17.setTextColor(m17 ? Ui.ON_ORANGE : Ui.TEXT3);
         boolean memOn = mem.memMode() && !mem.all().isEmpty();
-        modeVfo.setBackgroundResource(memOn ? 0 : R.drawable.seg_on); modeVfo.setTextColor(memOn ? Ui.TEXT3 : 0xFF1B1206);
-        modeMem.setBackgroundResource(memOn ? R.drawable.seg_on : 0); modeMem.setTextColor(memOn ? 0xFF1B1206 : Ui.TEXT3);
+        modeVfo.setBackgroundResource(memOn ? 0 : R.drawable.seg_on); modeVfo.setTextColor(memOn ? Ui.TEXT3 : Ui.ON_ORANGE);
+        modeMem.setBackgroundResource(memOn ? R.drawable.seg_on : 0); modeMem.setTextColor(memOn ? Ui.ON_ORANGE : Ui.TEXT3);
         // MEM: the compact card takes the digits' place (they stay laid out, invisible, so the card keeps their height)
         memCard.setVisibility(memOn ? View.VISIBLE : View.GONE);
         // the memory decides FM or M17, so the switch is hidden (kept in the layout, VFO/MEM stays put)
@@ -651,7 +651,7 @@ public final class MainActivity extends Activity implements Station.Listener {
         android.graphics.drawable.GradientDrawable bar = new android.graphics.drawable.GradientDrawable();
         bar.setCornerRadius(Ui.dp(this, 14));
         if (st.isTransmitting()) {
-            bar.setColor(Ui.TX); bar.setStroke(Ui.dp(this, 1), 0xFFE2654C);
+            bar.setColor(Ui.TX); bar.setStroke(Ui.dp(this, 1), Ui.TX_EDGE);
             txBar.setText(soft ? "TX · tap to stop" : "TX · release PTT to stop"); txBar.setTextColor(Ui.WHITE);
             txBar.setVisibility(View.VISIBLE);
         } else {

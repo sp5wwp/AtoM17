@@ -6,7 +6,7 @@
     <LinearLayout android:id="@+id/grpPtt" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
         <TextView style="@style/Head" android:text="Hardware key" />
         <LinearLayout style="@style/Group">
-            <TextView android:id="@+id/pttInfo" style="@style/Note" android:textSize="14sp" android:textColor="#FFFFFF" />
+            <TextView android:id="@+id/pttInfo" style="@style/Note" android:textSize="14sp" android:textColor="@color/white" />
             <LinearLayout style="@style/Row">
                 <Button android:id="@+id/pttLearn" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Learn PTT key" />
                 <Button android:id="@+id/pttForget" style="@style/Small" android:layout_width="0dp" android:layout_weight="1" android:text="Forget" />
@@ -75,7 +75,7 @@
         </LinearLayout>
         <TextView style="@style/Head" android:text="Receive processing" />
         <LinearLayout style="@style/Group">
-            <TextView android:id="@+id/dspLoad" style="@style/Note" android:textSize="14sp" android:textColor="#FFFFFF" />
+            <TextView android:id="@+id/dspLoad" style="@style/Note" android:textSize="14sp" android:textColor="@color/white" />
             <TextView style="@style/Note" android:text="Equaliser, decoder and audio, as a share of one CPU core, over the last 5 s (M17 mode). The log records it every 5 minutes." />
         </LinearLayout>
     </LinearLayout>

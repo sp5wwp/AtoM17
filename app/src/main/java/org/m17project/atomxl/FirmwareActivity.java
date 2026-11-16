@@ -72,7 +72,7 @@ public final class FirmwareActivity extends Activity {
         load.setEnabled(false); restore.setEnabled(false);              // until check() has looked at the phone's files
         trimBtn.setOnClickListener(v -> trimDialog());
 
-        phase = new TextView(this); phase.setTextColor(Ui.ORANGE); phase.setTextSize(15); phase.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        phase = new TextView(this); phase.setTextColor(Ui.ORANGE_TEXT); phase.setTextSize(15); phase.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         phase.setPadding(0, Ui.dp(this, 10), 0, Ui.dp(this, 2));
         root.addView(phase);
         bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
@@ -183,7 +183,7 @@ public final class FirmwareActivity extends Activity {
         // while it runs: the steps, the bar and the log get the screen (the long text and the buttons would push them off it)
         info.setVisibility(View.GONE);
         for (Button x : new Button[] { load, trimBtn, restore }) x.setVisibility(View.GONE);
-        step = -1; phaseName = ""; startedAt = System.currentTimeMillis(); phase.setTextColor(Ui.ORANGE);
+        step = -1; phaseName = ""; startedAt = System.currentTimeMillis(); phase.setTextColor(Ui.ORANGE_TEXT);
         bar.setProgress(0);
         showStep(0, 0);
         ui.post(tick);

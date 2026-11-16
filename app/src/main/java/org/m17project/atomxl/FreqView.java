@@ -32,9 +32,9 @@ final class FreqView extends View {
     FreqView(Context c) {
         super(c);
         Typeface mono = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD);
-        digit.setTypeface(mono); digit.setColor(0xFFFFFFFF); digit.setTextAlign(Paint.Align.CENTER);
-        dim.setTypeface(mono); dim.setColor(0xFF8FA9BF); dim.setTextAlign(Paint.Align.CENTER);
-        mark.setColor(0x55F59A23);
+        digit.setTypeface(mono); digit.setColor(Ui.WHITE); digit.setTextAlign(Paint.Align.CENTER);
+        dim.setTypeface(mono); dim.setColor(Ui.DIM); dim.setTextAlign(Paint.Align.CENTER);
+        mark.setColor((Ui.ORANGE & 0x00FFFFFF) | 0x55000000);
         setLongClickable(true);
         setFocusable(true);
         describe();

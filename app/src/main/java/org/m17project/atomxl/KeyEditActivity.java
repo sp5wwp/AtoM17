@@ -100,7 +100,7 @@ public final class KeyEditActivity extends Activity {
         bottom.setPadding(Ui.dp(this, 10), Ui.dp(this, 10), Ui.dp(this, 10), Ui.dp(this, 10));
         if (!isNew) {
             Button del = small("Delete");
-            del.setBackgroundResource(R.drawable.btn_danger); del.setTextColor(0xFFFFB3B5);
+            del.setBackgroundResource(R.drawable.btn_danger); del.setTextColor(Ui.BAD);
             del.setPadding(Ui.dp(this, 18), 0, Ui.dp(this, 18), 0);
             del.setOnClickListener(v -> new AlertDialog.Builder(this)
                     .setMessage("Delete the key \"" + key.name + "\"?" + (used.isEmpty() ? "" : " " + capital(used) + " will transmit and receive without encryption."))
@@ -110,7 +110,7 @@ public final class KeyEditActivity extends Activity {
             bottom.addView(del, dl);
         }
         Button save = new Button(this);
-        save.setText("Save"); save.setAllCaps(false); save.setTextColor(0xFF1B1206); save.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); save.setTextSize(15);
+        save.setText("Save"); save.setAllCaps(false); save.setTextColor(Ui.ON_ORANGE); save.setTypeface(android.graphics.Typeface.DEFAULT_BOLD); save.setTextSize(15);
         save.setBackgroundResource(R.drawable.btn_primary);
         save.setOnClickListener(v -> save());
         bottom.addView(save, new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1));

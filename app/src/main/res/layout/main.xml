@@ -9,9 +9,9 @@
         android:orientation="horizontal" android:gravity="center_vertical">
         <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/logo" android:contentDescription="M17" />
         <TextView android:id="@+id/status" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-            android:paddingLeft="8dp" android:textColor="#D3E0EB" android:textSize="11.5sp" android:maxLines="2" android:text="Radio off" />
+            android:paddingLeft="8dp" android:textColor="@color/text3" android:textSize="11.5sp" android:maxLines="2" android:text="Radio off" />
         <Button android:id="@+id/power" android:layout_width="wrap_content" android:layout_height="34dp" android:minWidth="64dp" android:minHeight="0dp"
-            android:background="@drawable/pill" android:textColor="#FFFFFF" android:textStyle="bold" android:textAllCaps="false" android:textSize="13sp"
+            android:background="@drawable/pill" android:textColor="@color/white" android:textStyle="bold" android:textAllCaps="false" android:textSize="13sp"
             android:paddingLeft="14dp" android:paddingRight="14dp" android:text="Start" />
         <!-- the 24 dp icon sits 12 dp inside its 48 dp button: pull it out by that much so its edge lines up with the widgets below -->
         <ImageButton android:id="@+id/gear" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_gear"
@@ -32,7 +32,7 @@
         <FrameLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1">
             <TextView android:id="@+id/powerBtn" android:layout_width="44dp" android:layout_height="42dp" android:layout_gravity="center"
                 android:background="@drawable/seg_bg" android:gravity="center" android:textStyle="bold" android:textSize="14sp"
-                android:textColor="#F59A23" android:text="HI" />
+                android:textColor="@color/orange" android:text="HI" />
         </FrameLayout>
         <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal"
             android:background="@drawable/seg_bg" android:padding="3dp">
@@ -50,7 +50,7 @@
         android:gravity="center_vertical" android:paddingLeft="4dp">
         <View android:id="@+id/sigBar" android:layout_width="3dp" android:layout_height="14dp" />
         <TextView android:id="@+id/sigText" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-            android:paddingLeft="8dp" android:textColor="#D3E0EB" android:textSize="12sp" android:singleLine="true" android:ellipsize="end" />
+            android:paddingLeft="8dp" android:textColor="@color/text3" android:textSize="12sp" android:singleLine="true" android:ellipsize="end" />
     </LinearLayout>
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
@@ -65,7 +65,7 @@
                 android:textStyle="bold" android:textSize="14sp" android:text="Inbox" />
             <TextView android:id="@+id/inboxBadge" android:layout_width="wrap_content" android:layout_height="18dp" android:minWidth="18dp"
                 android:layout_marginLeft="6dp" android:background="@drawable/badge" android:gravity="center" android:paddingLeft="5dp" android:paddingRight="5dp"
-                android:textColor="#1B1206" android:textSize="11sp" android:textStyle="bold" android:visibility="gone" />
+                android:textColor="@color/on_orange" android:textSize="11sp" android:textStyle="bold" android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 
@@ -80,7 +80,7 @@
             </ScrollView>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="6dp" android:gravity="right">
                 <Button android:id="@+id/heardClear" android:layout_width="wrap_content" android:layout_height="44dp" android:minWidth="88dp" android:minHeight="0dp"
-                    android:background="@drawable/btn" android:textColor="#FFFFFF" android:textStyle="bold" android:textAllCaps="false" android:text="Clear" />
+                    android:background="@drawable/btn" android:textColor="@color/white" android:textStyle="bold" android:textAllCaps="false" android:text="Clear" />
             </LinearLayout>
         </LinearLayout>
         <LinearLayout android:id="@+id/panelInbox" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:visibility="gone">
@@ -89,9 +89,9 @@
             </ScrollView>
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="6dp">
                 <Button android:id="@+id/smsNew" android:layout_width="0dp" android:layout_weight="1" android:layout_height="44dp" android:minHeight="0dp" android:background="@drawable/btn_primary"
-                    android:textColor="#1B1206" android:textStyle="bold" android:textAllCaps="false" android:text="New SMS" />
+                    android:textColor="@color/on_orange" android:textStyle="bold" android:textAllCaps="false" android:text="New SMS" />
                 <Button android:id="@+id/smsClear" android:layout_width="wrap_content" android:layout_height="44dp" android:minWidth="88dp" android:minHeight="0dp"
-                    android:layout_marginLeft="8dp" android:background="@drawable/btn" android:textColor="#FFFFFF" android:textStyle="bold"
+                    android:layout_marginLeft="8dp" android:background="@drawable/btn" android:textColor="@color/white" android:textStyle="bold"
                     android:textAllCaps="false" android:text="Clear" />
             </LinearLayout>
         </LinearLayout>
@@ -99,5 +99,5 @@
 
     <TextView android:id="@+id/txBar" android:layout_width="match_parent" android:layout_height="48dp" android:layout_marginTop="8dp"
         android:layout_marginBottom="10dp" android:gravity="center" android:textStyle="bold" android:textSize="15sp"
-        android:background="@drawable/card" android:textColor="#E4EDF5" android:text="Radio off" />
+        android:background="@drawable/card" android:textColor="@color/text2" android:text="Radio off" />
 </LinearLayout>

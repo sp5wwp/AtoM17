@@ -22,8 +22,8 @@ final class ScopeView extends View {
         mode = m;
         line.setColor(0x38FFFFFF); line.setStrokeWidth(Ui.dp(c, 1f));
         grid.setColor(0x33FFFFFF); grid.setStrokeWidth(1);
-        bar.setColor(0xFFF59A23);
-        text.setColor(0xFFC9D8E5); text.setTextSize(Ui.dp(c, 10)); text.setTypeface(Ui.MONO);
+        bar.setColor(Ui.ORANGE);
+        text.setColor(Ui.LABEL); text.setTextSize(Ui.dp(c, 10)); text.setTypeface(Ui.MONO);
     }
 
     void set(RxStats.Snap s) { snap = s; invalidate(); }
@@ -83,11 +83,11 @@ final class ScopeView extends View {
         int off = RxStats.HISTORY - snap.historyN;
         for (int i = 0; i < snap.historyN; i++) {
             float v = Math.min(top, snap.history[i]);
-            bar.setColor(v < 0.02f ? 0xFF7DF0B4 : v < 0.06f ? 0xFFFFCB6B : 0xFFFF9EA1);
+            bar.setColor(v < 0.02f ? Ui.OK : v < 0.06f ? Ui.WARN : Ui.BAD);
             float bh = Math.max(Ui.dp(getContext(), 1.5f), v / top * h);
             c.drawRect((off + i) * bw + 1, h - bh, (off + i + 1) * bw - 1, h, bar);
         }
-        bar.setColor(0xFFF59A23);
+        bar.setColor(Ui.ORANGE);
         c.drawText("10 %", Ui.dp(getContext(), 4), text.getTextSize() + 2, text);
     }
 
