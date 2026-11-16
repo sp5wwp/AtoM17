@@ -1,6 +1,7 @@
 /*
  * Host loopback test: m17tx symbols -> RRC (alpha 0.5, 10 sps at 48 kHz) -> FM deviation in Hz -> resample to
  * 32 kHz (the Atom XL's USB capture rate) -> m17rx_process_fm. Checks voice, SMS, AES, scrambler and signatures.
+ * Test 9 takes the app's own receive path instead: the equaliser's symbols re-synthesised at 48 kHz (m17resynth).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 #include <math.h>
@@ -12,6 +13,7 @@
 #include "m17rx.h"
 #include "m17.h"
 #include "m17agc.h"
+#include "m17resynth.h"
 
 static int fails;
 #define CHECK(c, ...) do { if (!(c)) { fails++; printf("FAIL: "); printf(__VA_ARGS__); printf("\n"); } else { printf("ok:   "); printf(__VA_ARGS__); printf("\n"); } } while (0)
@@ -75,7 +77,7 @@ static result_t run(m17rx_t* rx, const int8_t* sym, int n, float noise, float sc
         {
             if (ev.kind == M17RX_EV_STREAM_START) { r.starts++; strcpy(r.src, ev.link.src); strcpy(r.dst, ev.link.dst); r.enc = ev.link.enc_type; r.dec = ev.link.decrypt; }
             if (ev.kind == M17RX_EV_LINK_UPDATE && ev.link.meta_text_complete) strcpy(r.text, ev.link.meta_text);
-            if (ev.kind == M17RX_EV_STREAM_END) { r.ends++; r.sig_state = ev.sig_state; r.frames = ev.frames; strcpy(r.text[0] ? r.text : r.text, r.text); if (ev.link.meta_text[0]) strcpy(r.text, ev.link.meta_text); }
+            if (ev.kind == M17RX_EV_STREAM_END) { r.ends++; r.sig_state = ev.sig_state; r.frames = ev.frames; if (ev.link.meta_text[0]) strcpy(r.text, ev.link.meta_text); }
             if (ev.kind == M17RX_EV_PACKET) { r.packets++; strcpy(r.src, ev.link.src); strcpy(r.dst, ev.link.dst); strcpy(r.sms, ev.sms);
                                               r.pkt_meta = ev.link.meta_kind; r.pkt_pos = ev.link.gnss_valid_pos; r.lat = ev.link.gnss_lat; r.lon = ev.link.gnss_lon; }
         }
@@ -236,6 +238,47 @@ int main(void)
     m17rx_clear_public_keys(rx); uint8_t other[32], opub[64]; m17tx_make_key(other, opub); m17rx_add_public_key(rx, "SP5WWP", opub, 64); m17rx_reset(rx);
     r = run(rx, symbuf, n, 0, 1.0f);
     CHECK(r.sig_state == M17RX_SIG_INVALID, "signed, wrong key: sig_state=%d (2 = invalid)", r.sig_state);
+
+    /* 9. the app's receive path (rxPushSymbols): symbols -> m17resynth -> the core at 48 kHz. The META text has a
+       two-byte UTF-8 character across the boundary of blocks 0 and 1, which must arrive whole. */
+    {
+        m17rx_t* rx48 = m17rx_create();
+        m17rx_set_input_rate(rx48, 48000);
+        m17tx_config_t c9; memset(&c9, 0, sizeof(c9));
+        strcpy(c9.src, "SP5WWP"); strcpy(c9.dst, "@ALL"); c9.meta_kind = M17TX_META_TEXT;
+        const char* text9 = "AAAAAAAAAAAA\xc4\x85" "BBBBBBBBBBBBBBB";
+        strcpy(c9.meta_text, text9);
+        CHECK(m17tx_configure(tx, &c9) == 0, "resynth: configure");
+        n = voice_tx(tx, 40);
+        m17resynth_t rs; m17resynth_init(&rs);
+        float s9[192], o9[1920];
+        int starts = 0, ends = 0, frames = 0, audio = 0;
+        char got[64] = "";
+        for (int k = 0; k < n / 192 + 6; k++)
+        {
+            for (int i = 0; i < 192; i++) s9[i] = k * 192 + i < n ? symbuf[k * 192 + i] : 0;
+            m17resynth_run(&rs, s9, 192, o9);
+            m17rx_process_fm(rx48, o9, 1920);
+            int16_t pcm[4096]; int a; while ((a = m17rx_read_audio(rx48, pcm, 4096)) > 0) audio += a;
+            m17rx_event_t ev;
+            while (m17rx_next_event(rx48, &ev))
+            {
+                if (ev.kind == M17RX_EV_STREAM_START) starts++;
+                if (ev.kind == M17RX_EV_LINK_UPDATE && ev.link.meta_text_complete) strcpy(got, ev.link.meta_text);
+                if (ev.kind == M17RX_EV_STREAM_END) { ends++; frames = ev.frames; }
+            }
+        }
+        CHECK(starts == 1 && ends == 1 && frames >= 40, "resynth: start/end %d/%d, %d frames", starts, ends, frames);
+        CHECK(audio >= 40 * 320 - 640, "resynth: %d audio samples", audio);
+        CHECK(!strcmp(got, text9), "resynth: META text with a character across blocks arrives whole");
+        m17rx_destroy(rx48);
+
+        /* the encoder refuses settings out of range */
+        c9.enc = 3;
+        CHECK(m17tx_configure(tx, &c9) == -5, "configure: encryption type 3 refused");
+        c9.enc = M17TX_ENC_AES; c9.aes_bits = 100;
+        CHECK(m17tx_configure(tx, &c9) == -6, "configure: AES key size 100 refused");
+    }
 
     /* 8. pack */
     int8_t s4[8] = {3, 1, -1, -3, -3, -1, 1, 3}; uint8_t pk[2];

@@ -451,7 +451,7 @@ public final class SettingsPageActivity extends Activity implements Station.List
                 + "Wojciech Kaczmarski, SP5WWP, M17 Foundation.\n\n"
                 + "Based on SignalDeck © 2026 IIMacGyverII (GPL-3.0-or-later): bridge protocol, power sequences, the V076J symbol engine, "
                 + "the firmware loader and the M17 receive equaliser.\n\nM17: libm17, Codec2-mod, Codec2-mod-neural (LGPL-2.1, with the FARGAN runtime from Opus, BSD-3-Clause), "
-                + "libm17rx (M17 Project), micro-ecc, tinier-aes. Voice AGC from DroidStar (Doug McLain, GPL-3.0-or-later).\n\n" + M17Native.version());
+                + "libm17rx (M17 Project), micro-ecc. Voice AGC from DroidStar (Doug McLain, GPL-3.0-or-later).\n\n" + M17Native.version());
     }
 
     private void showSoundName() {

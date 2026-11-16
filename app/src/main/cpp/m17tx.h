@@ -52,7 +52,8 @@ typedef struct m17tx m17tx_t;
 
 m17tx_t* m17tx_create(void);
 void     m17tx_destroy(m17tx_t* tx);
-/* returns 0, or a negative number when the configuration cannot be used (bad callsign, key size, private key) */
+/* returns 0, or a negative number when the configuration cannot be used: -1 no source callsign, -2 CAN, -3 zero
+   scrambler seed, -4 private key, -5 encryption or META kind out of range, -6 key size */
 int      m17tx_configure(m17tx_t* tx, const m17tx_config_t* cfg);
 
 /* Stream: preamble + LSF (384 symbols). Returns the symbol count, or -1 when AES has no random bits for its nonce. */

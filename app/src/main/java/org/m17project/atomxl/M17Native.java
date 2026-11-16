@@ -1,5 +1,5 @@
 /*
- * AtoM17 - JNI declarations for libatom17 (libm17, Codec2-mod, micro-ecc, tinier-aes, libm17rx, m17tx).
+ * AtoM17 - JNI declarations for libatom17 (libm17, Codec2-mod, micro-ecc, libm17rx, m17tx).
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 package org.m17project.atomxl;

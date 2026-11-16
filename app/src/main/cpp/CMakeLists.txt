@@ -1,5 +1,5 @@
 # AtoM17 native code.
-#   atom17: libm17 + Codec2-mod (split-no-doubles) + Codec2-mod-neural (FARGAN) + micro-ecc + tinier-aes + the M17 receiver core (libm17rx, from
+#   atom17: libm17 + Codec2-mod (split-no-doubles) + Codec2-mod-neural (FARGAN) + micro-ecc + the M17 receiver core (libm17rx, from
 #           m17_sdrsharp) + the transmit encoder (m17tx) + the JNI bridge.
 #   sdalsa: SignalDeck's root ALSA helper (GPL-3.0-or-later), shipped as an asset and run through su.
 cmake_minimum_required(VERSION 3.22.1)
@@ -14,9 +14,9 @@ set(NN_SRC ${NN}/src/c2fargan.c ${NN}/src/c2f_features.c ${NN}/model/fargan_data
            ${NN}/third_party/opus/dnn/nnet.c ${NN}/third_party/opus/dnn/nnet_default.c ${NN}/third_party/opus/dnn/parse_lpcnet_weights.c)
 file(GLOB M17RX_SRC ${CMAKE_CURRENT_SOURCE_DIR}/m17rx/src/*.c)
 
-add_library(atom17 SHARED atom17_jni.c m17tx.c ${M17RX_SRC} ${LIBM17_SRC} ${CODEC2_SRC} ${T}/micro-ecc/uECC.c ${T}/tinier-aes/aes.c ${NN_SRC})
+add_library(atom17 SHARED atom17_jni.c m17tx.c ${M17RX_SRC} ${LIBM17_SRC} ${CODEC2_SRC} ${T}/micro-ecc/uECC.c ${NN_SRC})
 target_include_directories(atom17 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/m17rx/include
-                           ${CMAKE_CURRENT_SOURCE_DIR}/m17rx/src ${T}/libm17 ${T}/codec2-mod/inc ${T}/micro-ecc ${T}/tinier-aes
+                           ${CMAKE_CURRENT_SOURCE_DIR}/m17rx/src ${T}/libm17 ${T}/codec2-mod/inc ${T}/micro-ecc
                            ${NN}/include ${NN}/src ${NN}/model ${NN}/third_party/opus ${NN}/third_party/opus/dnn
                            ${NN}/third_party/opus/celt ${NN}/third_party/opus/include)
 target_compile_definitions(atom17 PRIVATE M17RX_BUILD=1 SUPPRESS_PERF_WARNINGS)

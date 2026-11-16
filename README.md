@@ -33,7 +33,7 @@ SignalDeck.
   phone from its own `/vendor/data/dmr/DMR006.U4A.V076.bin`. The APK carries only patches (`assets/*.patch.json`). The
   P1 loader bridge is built the same way from `/vendor/data/mcu/20201016161541.bin`.
 
-Libraries: libm17 1.4.3 (`49c3010`), Codec2-mod `split-no-doubles` (`1e5d642`), micro-ecc (M17 fork), tinier-aes, libm17rx
+Libraries: libm17 1.4.3 (`49c3010`), Codec2-mod `split-no-doubles` (`1e5d642`), micro-ecc (M17 fork), libm17rx
 from `m17_sdrsharp` (`10be6e8`). The TX encoder (`app/src/main/cpp/m17tx.c`) follows gr-m17's `m17_coder`.
 
 ## Build
@@ -44,10 +44,13 @@ export ANDROID_HOME=~/android-sdk     # platform 34, build-tools 34, NDK 26.3.11
 ```
 Host test of the M17 core:
 ```
-C=app/src/main/cpp; T=$C/third_party
-gcc -O2 -std=gnu11 -w -o loopback tools/hosttest/loopback.c $C/m17tx.c $C/m17rx/src/*.c $T/libm17/m17.c \
-  $T/libm17/{decode,encode,math,payload,phy}/*.c $T/codec2-mod/src/*.c $T/micro-ecc/uECC.c $T/tinier-aes/aes.c \
-  -I$C -I$C/m17rx/include -I$C/m17rx/src -I$T/libm17 -I$T/codec2-mod/inc -I$T/micro-ecc -I$T/tinier-aes -lm && ./loopback
+C=app/src/main/cpp; T=$C/third_party; N=$T/codec2-mod-neural
+gcc -O2 -std=gnu11 -w -DSUPPRESS_PERF_WARNINGS -o loopback tools/hosttest/loopback.c $C/m17tx.c $C/m17rx/src/*.c \
+  $T/libm17/m17.c $T/libm17/{decode,encode,math,payload,phy}/*.c $T/codec2-mod/src/*.c $T/micro-ecc/uECC.c \
+  $N/src/c2fargan.c $N/src/c2f_features.c $N/model/fargan_data.c $N/third_party/opus/dnn/{fargan,nnet,nnet_default,parse_lpcnet_weights}.c \
+  -I$C -I$C/m17rx/include -I$C/m17rx/src -I$T/libm17 -I$T/codec2-mod/inc -I$T/micro-ecc \
+  -I$N/include -I$N/src -I$N/model -I$N/third_party/opus -I$N/third_party/opus/dnn -I$N/third_party/opus/celt -I$N/third_party/opus/include \
+  -Itools/hosttest -lm && ./loopback
 ```
 
 CI: `.github/workflows/build.yml` builds the APK and runs the host test on every push, and attaches the APK to a

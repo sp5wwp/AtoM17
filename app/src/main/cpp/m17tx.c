@@ -2,6 +2,7 @@
  * AtoM17 - M17 transmit encoder. See m17tx.h.
  * Framing, META latching, AES-CTR nonce, scrambler, stream digest and signature follow gr-m17's m17_coder_impl.cc
  * (Copyright 2023 jmfriedt, 2024-2026 Wojciech Kaczmarski, GPL-3.0-or-later), rewritten for a pull-style C API.
+ * AES, the scrambler and the digest are the receiver's (m17rx/src/crypto.c), the code that decrypts and checks them.
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -17,7 +18,7 @@
 
 #include "m17.h"
 #include "codec2_mod.h"
-#include "aes.h"
+#include "crypto.h"
 #include "uECC.h"
 
 #define PAYLOAD_BYTES 16
@@ -25,7 +26,6 @@
 #define PKT_MAX_FRAMES 33
 #define C2_FRAME_BYTES 8
 static const uint8_t C2_SILENCE[C2_FRAME_BYTES] = {0x01, 0x00, 0x09, 0x43, 0x9C, 0xE4, 0x21, 0x08};
-static const time_t EPOCH_2020 = 1577836800L;
 
 struct m17tx
 {
@@ -40,6 +40,7 @@ struct m17tx
     uint32_t scram_state;
     int scram_subtype;
     int aes_subtype;
+    m17_aes_t aes;      /* the expanded key, once per configuration */
     codec2_encoder_t c2;
 };
 
@@ -76,7 +77,12 @@ m17tx_t* m17tx_create(void)
     return tx;
 }
 
-void m17tx_destroy(m17tx_t* tx) { free(tx); }
+void m17tx_destroy(m17tx_t* tx)
+{
+    if (!tx) return;
+    memset(tx, 0, sizeof(*tx));                        /* the keys */
+    free(tx);
+}
 
 static void upper9(char* dst, const char* src)
 {
@@ -106,11 +112,19 @@ int m17tx_configure(m17tx_t* tx, const m17tx_config_t* cfg)
     if (!src[0]) return -1;
     if (!dst[0]) strcpy(dst, "@ALL");
     if (c->can < 0 || c->can > 15) return -2;
+    if (c->enc < M17TX_ENC_NONE || c->enc > M17TX_ENC_AES) return -5;
+    if (c->meta_kind < M17TX_META_TEXT || c->meta_kind > M17TX_META_ECD) return -5;
 
     tx->aes_subtype = c->aes_bits == 192 ? 1 : c->aes_bits == 256 ? 2 : 0;
     tx->scram_subtype = c->scram_bits == 16 ? 1 : c->scram_bits == 24 ? 2 : 0;
+    if (c->enc == M17TX_ENC_AES)
+    {
+        if (c->aes_bits != 128 && c->aes_bits != 192 && c->aes_bits != 256) return -6;
+        if (m17_aes_init(&tx->aes, c->aes_key, c->aes_bits / 8) != 0) return -6;
+    }
     if (c->enc == M17TX_ENC_SCRAM)
     {
+        if (c->scram_bits != 8 && c->scram_bits != 16 && c->scram_bits != 24) return -6;
         uint32_t mask = c->scram_bits == 24 ? 0xFFFFFF : c->scram_bits == 16 ? 0xFFFF : 0xFF;
         c->scram_seed &= mask;
         if (c->scram_seed == 0) return -3;          /* an all-zero seed does not scramble */
@@ -188,48 +202,18 @@ static int latch_lsf(m17tx_t* tx, int start)
     return 0;
 }
 
-static void scrambler_bytes(m17tx_t* tx, uint8_t out[PAYLOAD_BYTES])
-{
-    uint32_t lfsr = tx->scram_state, bit;
-    memset(out, 0, PAYLOAD_BYTES);
-    for (int i = 0; i < 128; i++)
-    {
-        if (tx->scram_subtype == 0) bit = (lfsr >> 7) ^ (lfsr >> 5) ^ (lfsr >> 4) ^ (lfsr >> 3);
-        else if (tx->scram_subtype == 1) bit = (lfsr >> 15) ^ (lfsr >> 14) ^ (lfsr >> 12) ^ (lfsr >> 3);
-        else bit = (lfsr >> 23) ^ (lfsr >> 22) ^ (lfsr >> 21) ^ (lfsr >> 16);
-        bit &= 1;
-        lfsr = ((lfsr << 1) | bit) & 0xFFFFFF;
-        out[i / 8] |= (uint8_t)(bit << (7 - (i % 8)));
-    }
-    if (tx->scram_subtype == 0) lfsr &= 0xFF;
-    else if (tx->scram_subtype == 1) lfsr &= 0xFFFF;
-    tx->scram_state = lfsr;
-}
-
 static void encrypt_payload(m17tx_t* tx, uint8_t* data)
 {
     if (tx->cfg.enc == M17TX_ENC_AES)
     {
-        uint8_t iv[16];
-        memcpy(iv, tx->lsf_tx.meta, 14);
-        iv[14] = (tx->fn >> 8) & 0x7F;
-        iv[15] = tx->fn & 0xFF;
-        aes_ctr_bytewise_payload_crypt(iv, tx->cfg.aes_key, data, tx->aes_subtype);
+        m17_aes_ctr_frame(&tx->aes, tx->lsf_tx.meta, tx->fn, data);
     }
     else if (tx->cfg.enc == M17TX_ENC_SCRAM)
     {
         uint8_t k[PAYLOAD_BYTES];
-        scrambler_bytes(tx, k);
+        tx->scram_state = m17_lfsr_frame(tx->scram_state, tx->scram_subtype, k);
         for (int i = 0; i < PAYLOAD_BYTES; i++) data[i] ^= k[i];
     }
-}
-
-static void update_digest(m17tx_t* tx, const uint8_t* data)
-{
-    for (int i = 0; i < PAYLOAD_BYTES; i++) tx->digest[i] ^= data[i];
-    uint8_t t = tx->digest[0];
-    memmove(tx->digest, tx->digest + 1, PAYLOAD_BYTES - 1);
-    tx->digest[PAYLOAD_BYTES - 1] = t;
 }
 
 int m17tx_stream_begin(m17tx_t* tx, int8_t* out)
@@ -271,7 +255,7 @@ int m17tx_stream_voice(m17tx_t* tx, const int16_t pcm[320], int8_t* out)
     gen_frame_i8(out, data, FRAME_STR, &tx->lsf_tx, tx->lich_cnt, tx->fn);
     tx->fn = (tx->fn + 1) % 0x8000;
     tx->lich_cnt = (tx->lich_cnt + 1) % 6;
-    if (tx->cfg.sign) update_digest(tx, data);
+    if (tx->cfg.sign) m17_digest_update(tx->digest, data);
     if (tx->lich_cnt == 0)
     {
         if (tx->meta_blocks > 1) tx->meta_idx = (tx->meta_idx + 1) % tx->meta_blocks;
@@ -294,7 +278,7 @@ int m17tx_stream_end(m17tx_t* tx, const int16_t* pcm, int8_t* out)
     if (tx->cfg.sign)
     {
         uint8_t sig[64];
-        update_digest(tx, data);
+        m17_digest_update(tx->digest, data);
         uECC_sign(tx->cfg.priv_key, tx->digest, sizeof(tx->digest), sig, uECC_secp256r1());
         fn = 0x7FFC;
         for (int i = 0; i < 4; i++)
