@@ -81,6 +81,7 @@ JNIEXPORT jint JNICALL JF(rxReadAudio)(JNIEnv* env, jclass c, jlong p, jshortArr
     if (!h) return 0;
     jsize n = (*env)->GetArrayLength(env, out);
     jshort* s = (*env)->GetShortArrayElements(env, out, NULL);
+    if (!s) return 0;
     int got = m17rx_read_audio(h->rx, (int16_t*)s, n);
     (*env)->ReleaseShortArrayElements(env, out, s, 0);
     return got;
@@ -361,56 +362,63 @@ JNIEXPORT jint JNICALL JF(txConfigure)(JNIEnv* env, jclass c, jlong p, jstring s
     return r;
 }
 
-static int8_t g_sym[(3 + 33) * 192];
 
-static jint packed(JNIEnv* env, jbyteArray out, int nsym)
+/* The most symbols one call writes: an SMS, preamble + LSF + 33 packet frames + EoT. */
+#define TX_MAX_SYM ((3 + 33) * SYM_PER_FRA)
+
+/* `nsym` symbols packed into `out`: the byte count, or a negative error. Each call has its own symbol buffer. */
+static jint packed(JNIEnv* env, jbyteArray out, const int8_t* sym, int nsym)
 {
     if (nsym <= 0) return nsym;
-    uint8_t b[(3 + 33) * 48];
-    int n = m17tx_pack(g_sym, nsym, b);
+    if (!out) return -52;
+    uint8_t b[TX_MAX_SYM / 4];
+    int n = m17tx_pack(sym, nsym, b);
     if ((*env)->GetArrayLength(env, out) < n) return -50;
     (*env)->SetByteArrayRegion(env, out, 0, n, (const jbyte*)b);
     return n;
 }
-
 /* Preamble + LSF, packed: 96 bytes. */
 JNIEXPORT jint JNICALL JF(txBegin)(JNIEnv* env, jclass c, jlong p, jbyteArray out)
 {
-    return packed(env, out, m17tx_stream_begin((m17tx_t*)(intptr_t)p, g_sym));
+    int8_t sym[TX_MAX_SYM];
+    return packed(env, out, sym, m17tx_stream_begin((m17tx_t*)(intptr_t)p, sym));
 }
-
 /* One stream frame from 320 samples: 48 bytes. */
 JNIEXPORT jint JNICALL JF(txVoice)(JNIEnv* env, jclass c, jlong p, jshortArray pcm, jbyteArray out)
 {
     int16_t s[320];
+    int8_t sym[TX_MAX_SYM];
+    if (!pcm || (*env)->GetArrayLength(env, pcm) < 320) return -51;
     (*env)->GetShortArrayRegion(env, pcm, 0, 320, s);
-    return packed(env, out, m17tx_stream_voice((m17tx_t*)(intptr_t)p, s, g_sym));
+    return packed(env, out, sym, m17tx_stream_voice((m17tx_t*)(intptr_t)p, s, sym));
 }
-
 /* Last frame (+ signature) + EoT: up to 6 * 48 bytes. pcm may be null. */
 JNIEXPORT jint JNICALL JF(txEnd)(JNIEnv* env, jclass c, jlong p, jshortArray pcm, jbyteArray out)
 {
     int16_t s[320];
+    int8_t sym[TX_MAX_SYM];
+    if (pcm && (*env)->GetArrayLength(env, pcm) < 320) return -51;
     if (pcm) (*env)->GetShortArrayRegion(env, pcm, 0, 320, s);
-    return packed(env, out, m17tx_stream_end((m17tx_t*)(intptr_t)p, pcm ? s : NULL, g_sym));
+    return packed(env, out, sym, m17tx_stream_end((m17tx_t*)(intptr_t)p, pcm ? s : NULL, sym));
 }
-
 /* A whole SMS transmission (UTF-8 bytes), packed. */
 JNIEXPORT jint JNICALL JF(txSms)(JNIEnv* env, jclass c, jlong p, jbyteArray text, jbyteArray out)
 {
+    if (!text) return -1;
     jsize n = (*env)->GetArrayLength(env, text);
     char t[840];
+    int8_t sym[TX_MAX_SYM];
     if (n > 821) return -1;
     (*env)->GetByteArrayRegion(env, text, 0, n, (jbyte*)t);
-    return packed(env, out, m17tx_sms((m17tx_t*)(intptr_t)p, t, n, g_sym));
+    return packed(env, out, sym, m17tx_sms((m17tx_t*)(intptr_t)p, t, n, sym));
 }
-
 /* priv(32) || pub(64), or null */
 JNIEXPORT jbyteArray JNICALL JF(makeKey)(JNIEnv* env, jclass c)
 {
     uint8_t priv[32], pub[64];
     if (!m17tx_make_key(priv, pub)) return NULL;
     jbyteArray r = (*env)->NewByteArray(env, 96);
+    if (!r) { memset(priv, 0, sizeof priv); return NULL; }
     (*env)->SetByteArrayRegion(env, r, 0, 32, (const jbyte*)priv);
     (*env)->SetByteArrayRegion(env, r, 32, 64, (const jbyte*)pub);
     memset(priv, 0, sizeof priv);
@@ -425,6 +433,7 @@ JNIEXPORT jbyteArray JNICALL JF(publicKey)(JNIEnv* env, jclass c, jbyteArray pri
     memset(k, 0, sizeof k);
     if (!ok) return NULL;
     jbyteArray r = (*env)->NewByteArray(env, 64);
+    if (!r) return NULL;
     (*env)->SetByteArrayRegion(env, r, 0, 64, (const jbyte*)pub);
     return r;
 }
