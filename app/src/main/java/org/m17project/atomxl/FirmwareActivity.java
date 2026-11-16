@@ -69,6 +69,7 @@ public final class FirmwareActivity extends Activity {
             root.addView(x, lp);
         }
         labelLoad();
+        load.setEnabled(false); restore.setEnabled(false);              // until check() has looked at the phone's files
         trimBtn.setOnClickListener(v -> trimDialog());
 
         phase = new TextView(this); phase.setTextColor(Ui.ORANGE); phase.setTextSize(15); phase.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
@@ -86,15 +87,17 @@ public final class FirmwareActivity extends Activity {
         root.addView(sv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
         setContentView(root);
 
-        info.setText("Writes the module's flash through the bridge's loader route (P1 bridge, then the stock bridge back). "
-                + "About 5 minutes. Keep the phone on the charger, screen on, and do not touch the radio.\n\n"
-                + "The loader cannot read the installed image back: whatever is installed now cannot be saved first. "
-                + "Restore puts back the vendor V076 from this phone's own /vendor partition.\n\nChecking the phone's files…");
+        info.setText(INFO + "\n\nChecking the phone's files…");
         new Thread(this::check, "fw-check").start();
 
         load.setOnClickListener(v -> confirm(false));
         restore.setOnClickListener(v -> confirm(true));
     }
+
+    private static final String INFO = "Writes the module's flash through the bridge's loader route (P1 bridge, then the stock bridge back). "
+            + "About 5 minutes. Keep the phone on the charger, screen on, and do not touch the radio.\n\n"
+            + "The loader cannot read the installed image back: whatever is installed now cannot be saved first. "
+            + "Restore puts back the vendor V076 from this phone's own /vendor partition.";
 
     private void check() {
         Flasher f = new Flasher(this, null, null);
@@ -112,10 +115,13 @@ public final class FirmwareActivity extends Activity {
                 + "\nmodule now: " + (st.moduleTag().isEmpty() ? "unknown (start the radio first)" : st.moduleTag());
         boolean ok = root && v076 != null && j != null && bridge && dfu;
         ui.post(() -> {
-            info.append(s);
-            load.setEnabled(ok && !st.moduleTag().isEmpty());
-            restore.setEnabled(root && v076 != null && bridge && dfu);
-            if (st.moduleTag().isEmpty()) info.append("\n\nStart the radio on the main screen first, so the installed version is known.");
+            if (isFinishing() || isDestroyed()) return;
+            info.setText(INFO + s);                                         // replaces an earlier check's lines
+            boolean busy = st.isFlashing();                                // a load started from an earlier visit of this page
+            load.setEnabled(!busy && ok && !st.moduleTag().isEmpty());
+            restore.setEnabled(!busy && root && v076 != null && bridge && dfu);
+            if (busy) info.append("\n\nA firmware load is running. Its progress is in the log (Settings, Log).");
+            else if (st.moduleTag().isEmpty()) info.append("\n\nStart the radio on the main screen first, so the installed version is known.");
         });
     }
 
@@ -187,6 +193,7 @@ public final class FirmwareActivity extends Activity {
         st.flash(isRestore, new Flasher.Ui() {
             @Override public void phase(String p) {
                 ui.post(() -> {
+                    if (isDestroyed()) return;
                     if ("done".equals(p)) { finished(); return; }
                     int i = java.util.Arrays.asList(STEPS).indexOf(p);
                     if (i < 0 && step >= 0 && java.util.Arrays.asList("loader", "erasing", "finish", "restart").contains(p)) i = 4;
@@ -198,16 +205,28 @@ public final class FirmwareActivity extends Activity {
             @Override public void progress(int d, int t) {
                 ui.post(() -> { phaseName = "block " + d + " of " + t + String.format(java.util.Locale.US, " (%d %%)", t == 0 ? 0 : d * 100 / t); showStep(4, t == 0 ? 0 : (float) d / t); });
             }
+            /**
+             * Asked on the flash thread. Anything but "Replace for good" keeps the installed firmware: the page closed,
+             * the dialog dismissed, or no answer in 10 minutes. Nothing has been written to the module at this point.
+             */
             @Override public boolean confirmReplace(String tag) {
                 CountDownLatch done = new CountDownLatch(1);
                 AtomicBoolean yes = new AtomicBoolean();
-                ui.post(() -> new AlertDialog.Builder(FirmwareActivity.this).setCancelable(false)
-                        .setTitle("Replace " + tag + " for good?")
-                        .setMessage(tag + " is a newer vendor build than V076. Nobody has a copy of it, and the loader cannot read it back: "
-                                + "once replaced, it cannot be put back (Restore gives V076). Replace it?")
-                        .setPositiveButton("Replace for good", (d, w) -> { yes.set(true); done.countDown(); })
-                        .setNegativeButton("Keep " + tag, (d, w) -> done.countDown()).show());
-                try { done.await(); } catch (InterruptedException e) { return false; }
+                ui.post(() -> {
+                    if (isFinishing() || isDestroyed()) { done.countDown(); return; }
+                    try {
+                        new AlertDialog.Builder(FirmwareActivity.this).setCancelable(false)
+                                .setTitle("Replace " + tag + " for good?")
+                                .setMessage(tag + " is a newer vendor build than V076. Nobody has a copy of it, and the loader cannot read it back: "
+                                        + "once replaced, it cannot be put back (Restore gives V076). Replace it?")
+                                .setPositiveButton("Replace for good", (d, w) -> yes.set(true))
+                                .setNegativeButton("Keep " + tag, null)
+                                .setOnDismissListener(d -> done.countDown())
+                                .show();
+                    } catch (RuntimeException e) { done.countDown(); }    // the window went away meanwhile
+                });
+                try { if (!done.await(10, java.util.concurrent.TimeUnit.MINUTES)) return false; }
+                catch (InterruptedException e) { Thread.currentThread().interrupt(); return false; }
                 return yes.get();
             }
         });
@@ -235,7 +254,8 @@ public final class FirmwareActivity extends Activity {
         elapsed.setText(String.format(java.util.Locale.US, "took %d:%02d", s / 60, s % 60));
         info.setVisibility(View.VISIBLE);
         for (Button x : new Button[] { load, trimBtn, restore }) x.setVisibility(View.VISIBLE);
-        load.setEnabled(true); restore.setEnabled(true);
+        load.setEnabled(false); restore.setEnabled(false);
+        new Thread(this::check, "fw-check").start();                    // enabled again only if the files and root are still there
     }
 
     @Override public void onBackPressed() {

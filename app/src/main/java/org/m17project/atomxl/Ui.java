@@ -124,7 +124,7 @@ final class Ui {
         back.setImageResource(R.drawable.ic_back);
         back.setBackgroundResource(R.drawable.row_bg);
         back.setContentDescription("Back");
-        back.setOnClickListener(v -> a.finish());
+        back.setOnClickListener(v -> a.onBackPressed());                // the screen's own back rules apply (Firmware: not during a load)
         h.addView(back, new LinearLayout.LayoutParams(dp(a, 48), dp(a, 48)));
         TextView t = text(a, title, 20, WHITE, true);
         t.setPadding(dp(a, 4), 0, 0, 0);
