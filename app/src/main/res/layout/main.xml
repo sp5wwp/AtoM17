@@ -9,7 +9,7 @@
         android:orientation="horizontal" android:gravity="center_vertical">
         <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/logo" android:contentDescription="M17" />
         <TextView android:id="@+id/status" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-            android:paddingLeft="8dp" android:textColor="@color/text3" android:textSize="11.5sp" android:maxLines="2" android:text="Radio off" />
+            android:paddingLeft="8dp" android:textColor="@color/text3" android:textSize="11.5sp" android:maxLines="2" />
         <Button android:id="@+id/power" android:layout_width="wrap_content" android:layout_height="44dp" android:minWidth="64dp" android:minHeight="0dp"
             android:background="@drawable/pill" android:textColor="@color/white" android:textStyle="bold" android:textAllCaps="false" android:textSize="13sp"
             android:paddingLeft="14dp" android:paddingRight="14dp" android:text="Start" />
@@ -56,7 +56,7 @@
         <TextView android:id="@+id/tabLive" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
             android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="Live" />
         <TextView android:id="@+id/tabHeard" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
-            android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="Last" />
+            android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="Heard" />
         <LinearLayout android:id="@+id/tabInbox" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
             android:orientation="horizontal" android:gravity="center">
             <TextView android:id="@+id/tabInboxText" android:layout_width="wrap_content" android:layout_height="wrap_content"

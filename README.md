@@ -21,7 +21,7 @@ SignalDeck.
   * META: multi-block text, GNSS position, extended callsign data (ECD)
   * AES-128/192/256 and 8/16/24-bit scrambler decryption
   * ECDSA signature checks against stored public keys
-* **Receive measurements** (Settings -> Bench): symbol error rate before FEC, equaliser EVM, sync symbols, LICH
+* **Receive measurements** (Settings -> Diagnostics): symbol error rate before FEC, equaliser EVM, sync symbols, LICH
   corrections, Viterbi metric, preamble level, inner/outer level ratio, the eye of the radio's audio before the
   equaliser, the equalised symbol-level histogram and the symbol errors per frame. They are taken on the equaliser:
   libm17rx decodes a re-synthesised signal, so its own EVM, deviation and offset would describe that instead. The

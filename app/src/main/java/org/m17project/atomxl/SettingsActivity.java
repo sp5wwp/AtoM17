@@ -82,9 +82,9 @@ public final class SettingsActivity extends Activity {
                 new Row("PTT key", (st.pttKey.learned() ? "Learned: " + st.pttKey.code() : "Not learned") + (cfg.p.getBoolean("softPtt", false) ? " · on-screen PTT on" : ""), page("ptt", "PTT key")),
                 new Row("Module firmware", (tag.isEmpty() ? "start the radio to read it" : tag)
                         + (tag.endsWith("V076X") ? String.format(Locale.US, " · deviation ×%.3f", cfg.devGainLoaded()) : ""), () -> startActivity(new Intent(this, FirmwareActivity.class))),
-                new Row("Bench", "Receive signal · voice check · test tone · recording", page("bench", "Bench")),
-                new Row("Screen and power", new String[] { "Screen: phone timeout", "Screen: on while active", "Screen: always on" }[Math.max(0, Math.min(2, cfg.p.getInt("screenOn", 1)))]
-                        + " · " + new String[] { "never woken", "woken for messages", "woken for calls and messages" }[Math.max(0, Math.min(2, cfg.p.getInt("wakeFor", 1)))], page("screen", "Screen and power")),
+                new Row("Diagnostics", "Receive signal \u00b7 microphone gain and voice check \u00b7 test tone \u00b7 recording \u00b7 processing load", page("bench", "Diagnostics")),
+                new Row("Screen", new String[] { "Screen: phone timeout", "Screen: on while active", "Screen: always on" }[Math.max(0, Math.min(2, cfg.p.getInt("screenOn", 1)))]
+                        + " · " + new String[] { "never woken", "woken for messages", "woken for calls and messages" }[Math.max(0, Math.min(2, cfg.p.getInt("wakeFor", 1)))], page("screen", "Screen")),
                 new Row("Backup and restore", "Settings, keys, memories and messages in one file", this::backup),
                 new Row("Log", "What the radio and the decoder did", this::showLog),
                 new Row("About", "AtoM17 " + BuildConfig.VERSION_NAME + " · SP5WWP, M17 Foundation", page("about", "About")));

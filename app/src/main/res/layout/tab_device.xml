@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Device: the PTT key, bench tools, about; shown a group at a time by SettingsPageActivity. -->
+<!-- Device: the PTT key, diagnostics, messages, screen, about. SettingsPageActivity shows one group at a time. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
 
@@ -23,7 +23,7 @@
         <TextView style="@style/Head" android:text="Receive signal (M17)" />
         <LinearLayout android:id="@+id/signalBox" style="@style/Group" />
         <TextView style="@style/Note" android:text="Measured on the equaliser, from the radio's audio: libm17rx decodes a re-synthesised signal, so its own EVM, deviation and offset would describe that instead. The Atom's audio path removes DC, so the carrier offset cannot be measured here." />
-        <TextView style="@style/Head" android:text="Voice check" />
+        <TextView style="@style/Head" android:text="Microphone gain and voice check" />
         <LinearLayout style="@style/Group">
             <Spinner android:id="@+id/micGain" style="@style/Spin" />
             <Button android:id="@+id/voiceRec" style="@style/Big" android:text="Record 5 s, then play back" />
@@ -42,6 +42,11 @@
         <LinearLayout style="@style/Group">
             <Button android:id="@+id/record" style="@style/Big" android:text="Record M17 receive audio (30 s)" />
             <TextView style="@style/Note" android:text="Saves what the M17 decoder hears (8 kHz WAV) to Download/AtoM17, for checking a station that does not decode." />
+        </LinearLayout>
+        <TextView style="@style/Head" android:text="Receive processing" />
+        <LinearLayout style="@style/Group">
+            <TextView android:id="@+id/dspLoad" style="@style/Note" android:textSize="14sp" android:textColor="@color/white" />
+            <TextView style="@style/Note" android:text="Equaliser, decoder and audio, as a share of one CPU core, over the last 5 s (M17 mode). The log records it every 5 minutes." />
         </LinearLayout>
     </LinearLayout>
 
@@ -72,11 +77,6 @@
             <Spinner android:id="@+id/screenOn" style="@style/Spin" />
             <Spinner android:id="@+id/wakeFor" style="@style/Spin" />
             <TextView style="@style/Note" android:text="While active: kept on during a transmission, a received stream or an open FM squelch, and 10 s after; otherwise the phone's own screen timeout applies. Waking lights the screen for 5 s." />
-        </LinearLayout>
-        <TextView style="@style/Head" android:text="Receive processing" />
-        <LinearLayout style="@style/Group">
-            <TextView android:id="@+id/dspLoad" style="@style/Note" android:textSize="14sp" android:textColor="@color/white" />
-            <TextView style="@style/Note" android:text="Equaliser, decoder and audio, as a share of one CPU core, over the last 5 s (M17 mode). The log records it every 5 minutes." />
         </LinearLayout>
     </LinearLayout>
 

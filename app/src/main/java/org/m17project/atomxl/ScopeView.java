@@ -1,5 +1,5 @@
 /*
- * AtoM17 - the Bench's receive plots, from RxStats: the eye of the equalised symbols (raised-cosine shaped), the
+ * AtoM17 - the Diagnostics page's receive plots, from RxStats: the eye of the equalised symbols (raised-cosine shaped), the
  * histogram of the equaliser's outputs, and the symbol error rate per frame.
  * SPDX-License-Identifier: GPL-3.0-or-later
  */

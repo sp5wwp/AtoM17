@@ -524,7 +524,7 @@ public final class MainActivity extends Activity implements Station.Listener {
 
     private void updateSignal() {
         int color; String s;
-        if (!st.isOpen()) { color = Ui.IDLE; s = st.isStarting() ? "Starting the radio…" : "Radio off"; }
+        if (!st.isOpen()) { color = Ui.IDLE; s = st.isStarting() ? "Starting the radio\u2026" : ""; }
         else if (st.isTransmitting()) { color = Ui.TX_TEXT; s = "Transmitting · " + Config.mhz(cfg.txFreq()) + " MHz" + (cfg.shift() != 0 ? " (" + Config.shiftText(cfg.shift(), cfg.offset()) + ")" : "") + " · " + (cfg.high() ? "high" : "low") + " power"; }
         else if (!cfg.m17()) { boolean o = st.isReceiving(); color = o ? Ui.OK : Ui.IDLE; s = o ? "Carrier · squelch open" : "Squelch closed"; }
         else {
@@ -637,9 +637,9 @@ public final class MainActivity extends Activity implements Station.Listener {
         String s;
         if (st.isFlashing()) s = "Loading firmware…";
         else if (st.isStarting()) s = "Starting the radio…";
-        else if (st.isOpen()) s = (m17 ? "M17" : "FM") + " · " + st.moduleTag().replace("DMR006.U4A.", "") + "\nbridge " + st.bridgeDate()
-                + (m17 && !st.m17TxCapable() ? " · receive only" : "");
-        else s = st.error().isEmpty() ? "Radio off" : "Radio off: " + st.error();
+        else if (st.isOpen()) s = (m17 ? "M17" : "FM") + " \u00b7 " + st.moduleTag().replace("DMR006.U4A.", "")
+                + (m17 && !st.m17TxCapable() ? " \u00b7 receive only" : "");      // the bridge build is in Settings and the log
+        else s = st.error().isEmpty() ? "" : "Start failed: " + st.error();      // "Radio off" is on the Live card already
         status.setText(s);
 
         boolean soft = cfg.p.getBoolean("softPtt", false);
@@ -669,7 +669,7 @@ public final class MainActivity extends Activity implements Station.Listener {
     private long activeUntil;
     private boolean keptOn;
 
-    /** Keep the screen on as Settings › Screen and power says: always, never, or while something is on the air (+10 s). */
+    /** Keep the screen on as Settings › Screen says: always, never, or while something is on the air (+10 s). */
     private void screenOn() {
         int how = cfg.p.getInt("screenOn", 1);                       // 0 never, 1 while active, 2 always
         boolean active = st.isTransmitting() || st.isStarting() || st.isFlashing()
@@ -689,13 +689,11 @@ public final class MainActivity extends Activity implements Station.Listener {
         if (tab == 2 && hasWindowFocus()) { rebuildInbox(); st.inbox.markRead(); MsgNotify.clear(this); }
         showBadge();
         updateLive();
+        // a short notice, not a dialog: it must not interrupt operating, and the Inbox badge and the notification
+        // (with Reply) are there already
         if ("sms".equals(e.kind) && e.at > shownSmsAt && tab != 2 && hasWindowFocus()) {
             shownSmsAt = e.at;
-            new AlertDialog.Builder(this).setTitle("SMS from " + (e.src.isEmpty() ? "?" : e.src))
-                    .setMessage(e.sms + "\n\nto " + e.dst + " · " + new SimpleDateFormat("HH:mm:ss", Locale.US).format(new Date(e.at)))
-                    .setPositiveButton("Reply", (d, w) -> m17tab.smsDialog(e.src))
-                    .setNeutralButton("Inbox", (d, w) -> showTab(2))
-                    .setNegativeButton("Close", null).show();
+            Toast.makeText(this, "SMS from " + (e.src.isEmpty() ? "?" : e.src) + ": " + e.sms, Toast.LENGTH_LONG).show();
         }
     }
     private long shownSmsAt;
