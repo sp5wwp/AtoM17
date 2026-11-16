@@ -32,8 +32,11 @@ android {
             }
         }
     }
+    if (!ks && gradle.startParameter.taskNames.any { it.toLowerCase().contains('release') })
+        logger.warn('AtoM17: ATOM17_KEYSTORE is not set, the release build is signed with the debug key')
     buildTypes { release { minifyEnabled false; signingConfig ks ? signingConfigs.fixed : signingConfigs.debug } }
-    lint { abortOnError false; checkReleaseBuilds false }
+    // lint errors stop the build. ExpiredTargetSdkVersion is off: targetSdk stays 30, the Atom XL runs Android 11.
+    lint { abortOnError true; checkReleaseBuilds true; disable 'ExpiredTargetSdkVersion' }
 }
 
 // the assets must be merged after CMake has built sdalsa for the same build type (as SignalDeck does)

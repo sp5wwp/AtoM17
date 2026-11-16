@@ -112,7 +112,7 @@ final class MsgNotify {
         String who = from == null || from.isEmpty() ? "?" : from;
         int id = id(from);
         PendingIntent open = PendingIntent.getActivity(c, id, new Intent(c, MainActivity.class).putExtra("tab", 2)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_UPDATE_CURRENT);
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(c, CHANNEL) : new Notification.Builder(c);
         b.setSmallIcon(R.drawable.ic_notify)
                 .setContentTitle(who + (to != null && !to.isEmpty() ? " → " + to : ""))
@@ -126,7 +126,7 @@ final class MsgNotify {
         if (from != null && !from.isEmpty()) {
             RemoteInput in = new RemoteInput.Builder(KEY_REPLY).setLabel("Reply to " + who).build();
             PendingIntent reply = PendingIntent.getBroadcast(c, id, new Intent(c, ReplyReceiver.class).putExtra(EXTRA_TO, from).putExtra(EXTRA_ID, id),
-                    PendingIntent.FLAG_UPDATE_CURRENT);
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);   // mutable: the system adds the typed reply
             b.addAction(new Notification.Action.Builder(null, "Reply", reply).addRemoteInput(in).build());
         }
         if (Build.VERSION.SDK_INT < 26) { b.setDefaults(Notification.DEFAULT_LIGHTS); b.setPriority(Notification.PRIORITY_HIGH); }
