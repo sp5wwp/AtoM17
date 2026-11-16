@@ -51,11 +51,13 @@ public final class FirmwareActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         st = Station.get(this);
         int pad = (int) (12 * getResources().getDisplayMetrics().density);
+        LinearLayout page = new LinearLayout(this);                        // the header, then the body with 12 dp all round, as on the other pages
+        page.setOrientation(LinearLayout.VERTICAL);
+        page.addView(Ui.header(this, "Module firmware"));
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(pad, pad, pad, pad);
-        root.setPadding(pad / 2, 0, pad, pad);
-        root.addView(Ui.header(this, "Module firmware"));
+        root.setPadding(pad, Ui.dp(this, 4), pad, pad);
+        page.addView(root, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
         info = new TextView(this); info.setTextColor(Ui.TEXT3); info.setTextSize(13);
         root.addView(info);
 
@@ -85,7 +87,7 @@ public final class FirmwareActivity extends Activity {
         log = new TextView(this); log.setTextColor(Ui.WHITE); log.setTextSize(11); log.setTypeface(android.graphics.Typeface.MONOSPACE); log.setTextIsSelectable(true);
         ScrollView sv = new ScrollView(this); sv.addView(log); logScroll = sv;
         root.addView(sv, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
-        setContentView(root);
+        setContentView(page);
 
         info.setText(INFO + "\n\nChecking the phone's files…");
         new Thread(this::check, "fw-check").start();

@@ -67,6 +67,13 @@ public final class MainActivity extends Activity implements Station.Listener {
     private double posLat, posLon;
     private String posName = "";
 
+    /** A half-typed SMS survives a recreate (font size, theme, language) and the system ending the process. */
+    @Override protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        String[] d = m17tab != null ? m17tab.smsDraft() : null;
+        if (d != null) { out.putString("smsTo", d[0]); out.putString("smsText", d[1]); }
+    }
+
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         st = Station.get(this);
@@ -165,6 +172,7 @@ public final class MainActivity extends Activity implements Station.Listener {
         buildLive();
         showTab(getIntent().getIntExtra("tab", cfg.p.getInt("tab", 0)));
         MsgNotify.channel(this);
+        if (b != null && b.containsKey("smsText")) m17tab.smsDialog(b.getString("smsTo"), b.getString("smsText"));   // kept over a recreate
 
         txBar.setOnClickListener(v -> {
             if (!cfg.p.getBoolean("softPtt", false)) return;

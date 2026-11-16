@@ -203,6 +203,14 @@ final class M17Tab {
     /** Compose and send an M17 SMS (packet mode, protocol 0x05). {@code to}: a preset destination (a reply), or null. */
     void smsDialog(String to) { smsDialog(to, null); }
 
+    /** The composer while it is open, so MainActivity can keep a half-typed message over a recreate. */
+    private AlertDialog smsOpen;
+    private EditText smsTo, smsText;
+    /** {to, text} of the open composer, or null. */
+    String[] smsDraft() {
+        return smsOpen != null && smsOpen.isShowing() ? new String[] { smsTo.getText().toString(), smsText.getText().toString() } : null;
+    }
+
     void smsDialog(String to, String text) {
         android.widget.LinearLayout box = new android.widget.LinearLayout(a);
         box.setOrientation(android.widget.LinearLayout.VERTICAL);
@@ -219,14 +227,15 @@ final class M17Tab {
         if (text != null) msg.setText(text);
         TextView count = new TextView(a);
         count.setTextColor(Ui.IDLE);
-        count.setText("0 / 821 bytes");
+        Runnable counted = () -> {
+            int n = msg.getText().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
+            count.setText(n + " / 821 bytes, " + ((n + 4 + 24) / 25) + " frame" + ((n + 4 + 24) / 25 == 1 ? "" : "s"));
+        };
+        counted.run();                                                     // a prefilled text counts from the start
         msg.addTextChangedListener(new TextWatcher() {
             public void beforeTextChanged(CharSequence s, int x, int y, int z) { }
             public void onTextChanged(CharSequence s, int x, int y, int z) { }
-            public void afterTextChanged(Editable s) {
-                int n = s.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
-                count.setText(n + " / 821 bytes, " + ((n + 4 + 24) / 25) + " frame" + ((n + 4 + 24) / 25 == 1 ? "" : "s"));
-            }
+            public void afterTextChanged(Editable s) { counted.run(); }
         });
         box.addView(dst); box.addView(msg); box.addView(count);
         AlertDialog d = new AlertDialog.Builder(a).setTitle("M17 SMS").setView(box)
@@ -238,6 +247,7 @@ final class M17Tab {
             if (why != null) { Toast.makeText(a, why, Toast.LENGTH_LONG).show(); return; }
             d.dismiss();
         }));
+        smsOpen = d; smsTo = dst; smsText = msg;
         d.show();
         msg.requestFocus();
     }

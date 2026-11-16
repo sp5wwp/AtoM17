@@ -31,6 +31,14 @@ public final class MemEditActivity extends Activity {
     private LinearLayout fmCard, m17Card;
     private TextView keyPick, txNote;
 
+    /** The form survives a recreate (font size, theme, language) and the system ending the process. */
+    @Override protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        out.putString("ch", ch.json().toString());
+        out.putString("name", name.getText().toString()); out.putString("mhz", mhz.getText().toString());
+        out.putString("can", can.getText().toString()); out.putString("offset", offset.getText().toString());
+    }
+
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         st = Station.get(this);
@@ -41,6 +49,9 @@ public final class MemEditActivity extends Activity {
         if (index >= l.size()) index = -1;
         if (index >= 0) ch = l.get(index);
         else { ch = Memories.Ch.current(st.cfg); if (!current) ch.name = ""; }
+        if (b != null && b.containsKey("ch")) {                            // the form as it was before a recreate
+            try { ch = Memories.Ch.of(new org.json.JSONObject(b.getString("ch"))); } catch (org.json.JSONException ignored) { }
+        }
 
         LinearLayout root = Ui.vbox(this);
         root.addView(Ui.header(this, index >= 0 ? "Memory " + (index + 1) : current ? "Store current channel" : "New memory"));
@@ -166,6 +177,10 @@ public final class MemEditActivity extends Activity {
         bottom.addView(save, new LinearLayout.LayoutParams(0, Ui.dp(this, 48), 1));
         root.addView(bottom);
         setContentView(root);
+        if (b != null && b.containsKey("ch")) {                            // the typed text, which ch has not taken yet
+            name.setText(b.getString("name", "")); mhz.setText(b.getString("mhz", ""));
+            can.setText(b.getString("can", "")); offset.setText(b.getString("offset", ""));
+        }
     }
 
     // ---- helpers ----
