@@ -642,6 +642,9 @@ public final class MainActivity extends Activity implements Station.Listener {
             if (freq.hz() != cfg.freq()) freq.setHz(cfg.freq());
         }
         power.setContentDescription(st.isOpen() || st.isStarting() ? "Stop the radio" : "Start the radio");
+        // the icon's colour is the radio's state: orange on, white off, half orange while it starts or stops
+        boolean busy = st.isStarting() || st.isStopping();
+        power.setImageTintList(android.content.res.ColorStateList.valueOf(busy ? (Ui.ORANGE & 0x00FFFFFF) | 0x80000000 : st.isOpen() ? Ui.ORANGE : Ui.WHITE));
         String s;
         if (st.isFlashing()) s = "Loading firmware…";
         else if (st.isStarting()) s = "Starting the radio…";
