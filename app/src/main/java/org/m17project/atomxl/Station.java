@@ -333,6 +333,9 @@ final class Station implements Radio.Events, Audio.Sink {
     private final short[] pcm8 = new short[Audio.CAPTURE_PERIOD];
     private final java.util.concurrent.ConcurrentLinkedQueue<float[]> symQueue = new java.util.concurrent.ConcurrentLinkedQueue<>();
     private static final float[] SILENT = new float[192];
+    /** Frames of silence after the last received one (2 s), and how many are left. */
+    private static final int SILENT_AFTER = 50;
+    private int silentFrames;
     private volatile org.m17project.atomxl.dfe.M17Receiver dfe;
 
     /** The equaliser with the Atom XL table SignalDeck ships (fitted on the bench Atom XL); its frames go to symQueue. */
@@ -390,10 +393,16 @@ final class Station implements Radio.Events, Audio.Sink {
         if (dfe != null) dfe.feed(pcm8, n8);
         float[] fr = symQueue.poll();
         while (symQueue.size() > 4) fr = symQueue.poll();          // never lag more than a few frames
-        int evs, n;
-        synchronized (rxLock) {
-            evs = M17Native.rxPushSymbols(rxh, fr != null ? fr : SILENT);
-            n = M17Native.rxReadAudio(rxh, dec);
+        // silence goes in only for a while after the last frame (the core ends the call and plays out its audio): while
+        // nothing is received it kept the core's 48 kHz re-synthesis running on nothing, about 9 % of a core on the phone
+        int evs = 0, n = 0;
+        if (fr != null) silentFrames = SILENT_AFTER;
+        if (fr != null || silentFrames > 0) {
+            if (fr == null) silentFrames--;
+            synchronized (rxLock) {
+                evs = M17Native.rxPushSymbols(rxh, fr != null ? fr : SILENT);
+                n = M17Native.rxReadAudio(rxh, dec);
+            }
         }
         dspTime(System.nanoTime() - t0);                            // not the audio write: it blocks on the speaker
         if (n > 0) {

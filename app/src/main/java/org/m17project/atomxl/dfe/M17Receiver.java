@@ -79,9 +79,23 @@ public final class M17Receiver {
     private final Listener listener;
 
     // the audio at 48 kHz in a ring; absolute index = 48 kHz samples since start
-    private static final int RING = 48000 * 8;
-    private final float[] x48 = new float[RING];
-    private final float[] x8 = new float[2 * HALF + 1];          // the last input samples, for the interpolator
+    private static final int RING = 48000 * 8;                  // the history the receiver may use (8 s)
+    /** The 48 kHz buffer: a power of two above RING, so an index is a mask and not a division. Bounds still use RING. */
+    private static final int RING_SIZE = 1 << 19, RING_MASK = RING_SIZE - 1;
+    private final float[] x48 = new float[RING_SIZE];
+    private static final int NX8 = 2 * HALF + 1;
+    /** The last NX8 input samples, written twice (at w and w + NX8), so x8[w + 1 .. w + NX8] is always the window, oldest first. */
+    private final float[] x8 = new float[2 * NX8];
+    private int x8w;
+    /** INTERP split by output phase, in the order interpolate() sums: tap j of phase ph is INTERP[len - 1 - (UP j + ph)]. */
+    private static final float[][] PHASE = new float[UP][];
+    static {
+        for (int ph = 0; ph < UP; ph++) {
+            int m = 0; while (m < NX8 && UP * m + ph < INTERP.length) m++;
+            PHASE[ph] = new float[m];
+            for (int j = 0; j < m; j++) PHASE[ph][j] = INTERP[INTERP.length - 1 - (UP * j + ph)];
+        }
+    }
     private long n8, n48;                                        // samples received (8 kHz) / produced (48 kHz)
 
     // preamble detector (Goertzel at 2400 Hz on the 8 kHz audio, 20 ms windows every 10 ms)
@@ -146,11 +160,14 @@ public final class M17Receiver {
     /** 8 kHz sample time t (since start) -> its index in the 48 kHz stream (the interpolator lags HALF input samples). */
     static long to48(long t8) { return t8 * UP + (long) HALF * UP; }
     private void interpolate(float v) {
-        System.arraycopy(x8, 1, x8, 0, x8.length - 1); x8[x8.length - 1] = v; n8++;
+        x8w = x8w + 1 == NX8 ? 0 : x8w + 1;
+        x8[x8w] = v; x8[x8w + NX8] = v; n8++;
+        int newest = x8w + NX8;                                      // x8[newest - j] is the input j samples back
         for (int ph = 0; ph < UP; ph++) {                            // the 6 outputs between input times n-HALF and n-HALF+5/6
+            float[] t = PHASE[ph];
             float s = 0;
-            for (int j = 0; j < x8.length; j++) { int ti = UP * j + ph; if (ti < INTERP.length) s += x8[x8.length - 1 - j] * INTERP[INTERP.length - 1 - ti]; }
-            x48[(int) (n48 % RING)] = s; n48++;
+            for (int j = 0; j < t.length; j++) s += x8[newest - j] * t[j];
+            x48[(int) (n48 & RING_MASK)] = s; n48++;
         }
     }
     private void push(float v) {
@@ -180,7 +197,7 @@ public final class M17Receiver {
         s.soft = ys; s.mse = mse; s.free = true; s.gain = rms;
         t.frame(s);
     }
-    private float at(long i) { return i < 0 || i >= n48 || n48 - i >= RING ? 0f : x48[(int) (i % RING)]; }
+    private float at(long i) { return i < 0 || i >= n48 || n48 - i >= RING ? 0f : x48[(int) (i & RING_MASK)]; }
 
     private void preamble(float v) {
         win[winFill++] = v;
@@ -203,11 +220,16 @@ public final class M17Receiver {
     /** Features of the symbol centred at 48 kHz index p, with the decision history `hist` (most recent first). */
     private void features(long p, float[] hist) {
         int j = 0, n = 2 * L + 1;
+        // the 17 taps read x48 directly when all of them are inside the usable history (the usual case): at() checks
+        // its bounds per call, which on the phone cost about as much as the arithmetic. Same values either way.
+        long lo = p - 5L * L, hi = p + 5L * L;
+        boolean inside = lo >= 0 && hi < n48 && n48 - lo < RING;
         for (int m = -L; m <= L; m++) {
-            float v = at(p + 5L * m) / gain;
+            float v = (inside ? x48[(int) ((p + 5L * m) & RING_MASK)] : at(p + 5L * m)) / gain;
             f[j] = v; f[j + n] = v * v * v; f[j + 2 * n] = Math.abs(v) * v; f[j + 3 * n] = v * v * v * v * v; j++;
         }
-        System.arraycopy(hist, 0, f, GROUPS * n, FB); f[NCOEF - 1] = 1f;
+        for (int i = 0, o = GROUPS * n; i < FB; i++) f[o + i] = hist[i];   // a loop, as in run()
+        f[NCOEF - 1] = 1f;
     }
     private float out() { float y = 0; for (int i = 0; i < NCOEF; i++) y += coef[i] * f[i]; return y; }
     static float slice(float y) { return y >= 2 ? 3 : y >= 0 ? 1 : y >= -2 ? -1 : -3; }
@@ -220,7 +242,8 @@ public final class M17Receiver {
         for (int k = 0; k < n; k++) {
             features(p0 + (long) k * SPS48, hist);
             float y = out(), d = slice(y); if (ys != null) ys[off + k] = y; err += (y - d) * (y - d);
-            System.arraycopy(hist, 0, hist, 1, FB - 1); hist[0] = known != null && k < known.length && known[k] != 0 ? known[k] : d;
+            for (int i = FB - 1; i > 0; i--) hist[i] = hist[i - 1];       // a loop: System.arraycopy is a call on ART, costly for 23 floats
+            hist[0] = known != null && k < known.length && known[k] != 0 ? known[k] : d;
         }
         return err;
     }
@@ -419,6 +442,8 @@ public final class M17Receiver {
         for (int i = 0; i < 8; i++) if (slice(ys[i]) != sync[i]) miss++;
         return miss * 100 + err;
     }
+    /** Late entry, stage 2: a candidate frame's mean squared decision error limits, after 48 symbols and after all 192. */
+    static final float LATE_ABORT_MSE = 3.0f, LATE_DECODE_MSE = 1.5f;
     private void lateEntry() {
         long frame48 = 192L * SPS48, newest = n48 - (frame48 + 8 * SPS48 + 5 * L + 60), oldest = Math.max(newest - frame48, lateFloor48);
         if (newest <= oldest) return;
@@ -473,7 +498,13 @@ public final class M17Receiver {
             float r2 = (float) Math.sqrt(e2 / Math.max(1, c2));
             for (float k : new float[] { ck[i] / 1.26f, ck[i], ck[i] * 1.26f }) {
                 gain = r2 * k; float[] h = new float[FB];
-                run(cp[i], 192, h, ys, 0, sync);
+                // on noise this is most of the receiver's work. A true frame stays below about 0.85 mean squared decision
+                // error, noise candidates sit near 11 (B210 bench, 2026-11-17): stop after a quarter frame when it is far
+                // off, and decode only frames below LATE_DECODE_MSE. The two runs give the same symbols as one.
+                float ea = run(cp[i], 48, h, ys, 0, sync);
+                if (ea / 48 > LATE_ABORT_MSE) continue;
+                float eb = run(cp[i] + 48L * SPS48, 144, h, ys, 48, null);
+                if ((ea + eb) / 192 > LATE_DECODE_MSE) continue;
                 M17.Stream st = M17.decodeStream(ys, 8);
                 if (st.lich == null || st.lichErrors > 6 || st.metric >= -150 || st.metric >= best) continue;
                 run(cp[i] + frame48, 8, h, ys, 0, null); int miss = 0;
