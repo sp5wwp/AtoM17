@@ -32,11 +32,20 @@ M17 reception is benchmarked against a USRP B210 reference.
   * META: multi-block text, GNSS position, extended callsign data (ECD)
   * AES-128/192/256 and 8/16/24-bit scrambler decryption
   * ECDSA signature checks against stored public keys
-* **Receive measurements** (Settings -> Diagnostics): symbol error rate before FEC, equaliser EVM, sync symbols, LICH
-  corrections, Viterbi metric, preamble level, inner/outer level ratio, the eye of the radio's audio before the
-  equaliser, the equalised symbol-level histogram and the symbol errors per frame. They are taken on the equaliser:
-  libm17rx decodes a re-synthesised signal, so its own EVM, deviation and offset would describe that instead. The
-  Atom's audio path removes DC, so the carrier offset cannot be measured.
+* **Receive measurements** (Settings -> Diagnostics):
+  * symbol error rate before FEC
+  * equaliser EVM
+  * sync symbols
+  * LICH corrections
+  * Viterbi metric
+  * preamble level
+  * inner/outer level ratio
+  * the eye of the equalised symbols
+  * the equalised symbol-level histogram
+  * the symbol errors per frame
+
+  They are taken on the equaliser: libm17rx decodes a re-synthesised signal, so its own EVM, deviation and offset
+  would describe that instead. The Atom's audio path removes DC, so the carrier offset cannot be measured.
 * **M17 transmit** (needs a modified firmware in the module): Codec2 3200 voice, CAN, the same three META kinds (position from the
   phone's GNSS), AES or scrambler, signed streams (key generated on the phone), and SMS (packet mode). All of it goes
   through the V076J symbol engine.
