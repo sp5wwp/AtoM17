@@ -7,9 +7,20 @@ SignalDeck's bridge protocol, power sequences, V076J symbol-engine transmit path
 FM and M17 need were taken, there is no DMR, no other mode and no network service. It is a modified work and not
 SignalDeck.
 
-## Main screen
+## Screenshots
 
-![Main screen](pics/main.png)
+| | | |
+|---|---|---|
+| ![Main screen, M17](pics/main.png) | ![Main screen, FM, high power](pics/main-fm.png) | ![SMS](pics/sms.png) |
+| Main screen, M17 | FM, high power | Sending an SMS |
+| ![Settings](pics/settings.png) | ![Diagnostics](pics/diagnostics.png) | |
+| Settings | Diagnostics (receive measurements) | |
+
+The top row: transmit power (LO / HI), mode (M17 / FM) and VFO / MEM, each a toggle showing its state. The power icon
+in the header starts and stops the radio.
+
+M17 reception was tuned against a USRP B210 reference: receive EVM went from about 13 % to about 8 %, CPU use dropped
+by a quarter. See [docs/RECEIVE-TUNING.md](docs/RECEIVE-TUNING.md).
 
 ## What it does
 
@@ -61,7 +72,7 @@ CI build is signed with a different throw-away key and needs an uninstall first.
 
 1. `adb install app-debug.apk`. Use **Wi-Fi adb**: while the radio is on, the phone's USB socket belongs to the radio
    bridge and a cable connection drops.
-2. Open AtoM17, allow the microphone (and location, for GNSS META), then press **Start** and grant root in Magisk.
+2. Open AtoM17, allow the microphone (and location, for GNSS META), then tap the power icon at the top and grant root in Magisk.
 3. AtoM17 then:
    * stops and disables the stock intercom app (`com.agold.intercom`);
    * stops the radio HAL;
