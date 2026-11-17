@@ -648,7 +648,7 @@ public final class MainActivity extends Activity implements Station.Listener {
         String s;
         if (st.isFlashing()) s = "Loading firmware…";
         else if (st.isStarting()) s = "Starting the radio…";
-        else if (st.isOpen()) s = st.moduleTag().replace("DMR006.U4A.", "")     // the mode is on its button, the bridge build in the log
+        else if (st.isOpen()) s = "RF module's firmware:\n" + st.moduleTag().replace("DMR006.U4A.", "")   // the mode is on its button
                 + (m17 && !st.m17TxCapable() ? " \u00b7 M17 receive only" : "");
         else s = st.error().isEmpty() ? "" : "Start failed: " + st.error();      // "Radio off" is on the Live card already
         status.setText(s);

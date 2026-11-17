@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- AtoM17 main screen: header, FM / M17 and VFO / MEM switches, the frequency, the tabs and their panels.
-     Options live in SettingsActivity (gear). Touch targets are 48 dp, the Start / Stop pill 44 dp (the header is 48). -->
+     Options live in SettingsActivity (gear). Touch targets are 48 dp, the tabs 40 dp (they are wide). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:paddingLeft="10dp" android:paddingRight="10dp" android:paddingTop="4dp">
@@ -9,7 +9,8 @@
         android:orientation="horizontal" android:gravity="center_vertical">
         <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/logo" android:contentDescription="@string/m17" />
         <TextView android:id="@+id/status" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-            android:paddingLeft="8dp" android:textColor="@color/text3" android:textSize="11.5sp" android:maxLines="2" />
+            android:paddingLeft="8dp" android:textColor="@color/text3" android:textSize="11.5sp" android:maxLines="2"
+            android:includeFontPadding="false" android:lineSpacingMultiplier="0.95" />
         <ImageButton android:id="@+id/power" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/ic_power"
             android:background="@drawable/row_bg" android:contentDescription="@string/main_power_desc" />
         <!-- the 24 dp icon sits 12 dp inside its 48 dp button: pull it out by that much so its edge lines up with the widgets below -->
@@ -19,7 +20,7 @@
 
     <!-- transmit power, mode and VFO / MEM: three toggles of one kind, the label (or the power icon) is the state -->
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
-        android:gravity="center_vertical" android:paddingBottom="8dp">
+        android:gravity="center_vertical" android:paddingBottom="14dp">
         <LinearLayout android:id="@+id/powerBtn" android:layout_width="56dp" android:layout_height="48dp" android:orientation="vertical"
             android:gravity="center" android:background="@drawable/toggle" android:clickable="true" android:focusable="true">
             <ImageView android:id="@+id/powerIcon" android:layout_width="26dp" android:layout_height="16dp" android:src="@drawable/ic_txpower_lo"
@@ -36,7 +37,7 @@
     </LinearLayout>
 
     <FrameLayout android:id="@+id/freqHolder" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:background="@drawable/card" android:paddingLeft="4dp" android:paddingRight="4dp" />
+        android:layout_marginBottom="6dp" android:background="@drawable/card" android:paddingLeft="4dp" android:paddingRight="4dp" />
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:orientation="horizontal"
         android:gravity="center_vertical" android:paddingLeft="4dp">
@@ -47,11 +48,11 @@
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal"
         android:background="@drawable/seg_bg" android:padding="3dp">
-        <TextView android:id="@+id/tabLive" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+        <TextView android:id="@+id/tabLive" android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp"
             android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="@string/main_tablive" />
-        <TextView android:id="@+id/tabHeard" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+        <TextView android:id="@+id/tabHeard" android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp"
             android:gravity="center" android:textStyle="bold" android:textSize="14sp" android:text="@string/main_tabheard" />
-        <LinearLayout android:id="@+id/tabInbox" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp"
+        <LinearLayout android:id="@+id/tabInbox" android:layout_width="0dp" android:layout_weight="1" android:layout_height="40dp"
             android:orientation="horizontal" android:gravity="center">
             <TextView android:id="@+id/tabInboxText" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:textStyle="bold" android:textSize="14sp" android:text="@string/main_tabinboxtext" />
