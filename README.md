@@ -9,18 +9,18 @@ SignalDeck.
 
 ## Screenshots
 
-| | | |
-|---|---|---|
-| ![Main screen, M17](pics/main.png) | ![Main screen, FM, high power](pics/main-fm.png) | ![SMS](pics/sms.png) |
-| Main screen, M17 | FM, high power | Sending an SMS |
-| ![Settings](pics/settings.png) | ![Diagnostics](pics/diagnostics.png) | |
-| Settings | Diagnostics (receive measurements) | |
+<p>
+<img src="pics/main.png" width="250" alt="Main screen, receiving an M17 call">
+<img src="pics/heard.png" width="250" alt="Heard list">
+<img src="pics/inbox.png" width="250" alt="SMS inbox">
+</p>
+<p>
+<img src="pics/main-fm.png" width="250" alt="Main screen, FM, high power">
+<img src="pics/diagnostics.png" width="250" alt="Diagnostics, receiving">
+<img src="pics/settings.png" width="250" alt="Settings">
+</p>
 
-The top row: transmit power (LO / HI), mode (M17 / FM) and VFO / MEM, each a toggle showing its state. The power icon
-in the header starts and stops the radio.
-
-M17 reception was tuned against a USRP B210 reference: receive EVM went from about 13 % to about 8 %, CPU use dropped
-by a quarter. See [docs/RECEIVE-TUNING.md](docs/RECEIVE-TUNING.md).
+M17 reception is benchmarked against a USRP B210 reference.
 
 ## What it does
 
