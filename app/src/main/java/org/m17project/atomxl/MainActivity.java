@@ -657,11 +657,13 @@ public final class MainActivity extends Activity implements Station.Listener {
         android.graphics.drawable.GradientDrawable bar = new android.graphics.drawable.GradientDrawable();
         bar.setCornerRadius(Ui.dp(this, 14));
         if (st.isTransmitting()) {
-            bar.setColor(Ui.TX); bar.setStroke(Ui.dp(this, 1), Ui.TX_EDGE);
-            txBar.setText(soft ? "TX · tap to stop" : "TX · release PTT to stop"); txBar.setTextColor(Ui.WHITE);
-            txBar.setVisibility(View.VISIBLE);
+            // the bar is the on-screen PTT key: with the side key it would only push the panels up while the status line
+            // and the Live card already say "Transmitting"
+            bar.setColor(Ui.TX);
+            txBar.setText("TX \u00b7 tap to stop"); txBar.setTextColor(Ui.WHITE);
+            txBar.setVisibility(soft ? View.VISIBLE : View.GONE);
         } else {
-            bar.setColor(0x1CFFFFFF); bar.setStroke(Ui.dp(this, 1), 0x29FFFFFF);
+            bar.setColor(0x1CFFFFFF);
             txBar.setTextColor(Ui.TEXT2);
             if (!st.isOpen()) { txBar.setText("Radio off"); txBar.setVisibility(soft ? View.VISIBLE : View.GONE); }
             else if (soft) { txBar.setText("Tap here to transmit"); txBar.setVisibility(View.VISIBLE); }
