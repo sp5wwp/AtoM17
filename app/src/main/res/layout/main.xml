@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- AtoM17 main screen: header, FM / M17 and VFO / MEM switches, the frequency, the tabs and their panels.
+<!-- AtoM17 main screen: header, the toggles, the frequency, the tabs and their panels. Controls are light (the toggles),
+     displays dark (the frequency window and the tab bar share seg_bg).
      Options live in SettingsActivity (gear). Touch targets are 48 dp, the tabs 40 dp (they are wide). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
@@ -37,7 +38,7 @@
     </LinearLayout>
 
     <FrameLayout android:id="@+id/freqHolder" android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp" android:background="@drawable/card" android:paddingLeft="4dp" android:paddingRight="4dp" />
+        android:layout_marginBottom="6dp" android:background="@drawable/seg_bg" android:paddingLeft="4dp" android:paddingRight="4dp" />
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:orientation="horizontal"
         android:gravity="center_vertical" android:paddingLeft="4dp">
