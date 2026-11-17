@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Radio on / off: the power symbol, an open circle and a bar. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:strokeColor="@color/white" android:strokeWidth="2.2" android:strokeLineCap="round"
+        android:pathData="M6.86,6.87 A8,8 0 1,0 17.14,6.87 M12,3 L12,11" />
+</vector>

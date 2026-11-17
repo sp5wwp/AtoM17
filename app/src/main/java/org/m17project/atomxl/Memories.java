@@ -56,6 +56,15 @@ final class Memories {
             else if (simplexWord) t += " Simplex";
             return t + (high ? " HI" : " LO");
         }
+        /**
+         * The chip under the main screen's frequency: only what the buttons above it do not show (they show the mode and
+         * the power), parts separated by a middle dot: "CAN 0, Simplex" or "12.5 kHz, CTCSS 88.5, -7.6 MHz".
+         */
+        String chip() {
+            String t = m17 ? "CAN " + can : (wide ? "25" : "12.5") + " kHz";
+            if (!m17 && (rxTone > 0 || txTone > 0)) t += " \u00b7 CTCSS " + SettingsActivity.tone(rxTone > 0 ? rxTone : txTone);
+            return t + " \u00b7 " + (shift != 0 ? Config.shiftText(shift, offset) + " MHz" : "Simplex");
+        }
         /** 438.825.000, as the frequency display groups it. */
         String dotted() {
             String d = String.format(java.util.Locale.US, "%09d", hz);

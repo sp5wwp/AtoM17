@@ -3,12 +3,9 @@
 <resources>
     <string name="app_name">AtoM17</string>
     <string name="m17">M17</string>
-    <string name="main_power">Start</string>
-    <string name="main_gear_desc">Settings</string>
     <string name="main_modefm">FM</string>
-    <string name="main_powerbtn">HI</string>
-    <string name="main_modevfo">VFO</string>
-    <string name="main_modemem">MEM</string>
+    <string name="main_power_desc">Start or stop the radio</string>
+    <string name="main_gear_desc">Settings</string>
     <string name="main_tablive">Live</string>
     <string name="main_tabheard">Heard</string>
     <string name="main_tabinboxtext">Inbox</string>

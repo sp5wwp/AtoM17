@@ -25,6 +25,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -44,13 +45,15 @@ public final class MainActivity extends Activity implements Station.Listener {
     private Station st;
     private Config cfg;
     private FreqView freq;
-    private TextView powerBtn, shiftChip, shiftTx;
+    private View powerBtn;
+    private ImageView powerIcon;
+    private TextView powerText, shiftChip, shiftTx;
     private LinearLayout shiftLine;
-    private TextView status, sigText, txBar, modeFm, modeM17, modeVfo, modeMem, badge, memCh, memName, memFreq, memTag;
+    private TextView status, sigText, txBar, modeBtn, memBtn, badge, memCh, memName, memFreq, memTag;
     private LinearLayout memCard;
     private Memories mem;
     private View sigBar;
-    private Button power;
+    private ImageButton power;
     private LinearLayout heardList, inboxList;
     private M17Tab m17tab;
     private int tab;
@@ -82,8 +85,8 @@ public final class MainActivity extends Activity implements Station.Listener {
         setContentView(R.layout.main);
 
         status = findViewById(R.id.status); sigText = findViewById(R.id.sigText); txBar = findViewById(R.id.txBar);
-        power = findViewById(R.id.power); modeFm = findViewById(R.id.modeFm); modeM17 = findViewById(R.id.modeM17);
-        modeVfo = findViewById(R.id.modeVfo); modeMem = findViewById(R.id.modeMem); badge = findViewById(R.id.inboxBadge);
+        power = findViewById(R.id.power); modeBtn = findViewById(R.id.modeBtn); memBtn = findViewById(R.id.memBtn);
+        powerIcon = findViewById(R.id.powerIcon); powerText = findViewById(R.id.powerText); badge = findViewById(R.id.inboxBadge);
         heardList = findViewById(R.id.heardList); inboxList = findViewById(R.id.inboxList);
         sigBar = findViewById(R.id.sigBar);
         android.graphics.drawable.GradientDrawable bd = new android.graphics.drawable.GradientDrawable();
@@ -147,13 +150,12 @@ public final class MainActivity extends Activity implements Station.Listener {
 
         power.setOnClickListener(v -> { if (st.isOpen() || st.isStarting()) RadioService.stop(this); else RadioService.start(this); });
         findViewById(R.id.gear).setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
-        modeFm.setOnClickListener(v -> setMode(false));
-        modeM17.setOnClickListener(v -> setMode(true));
-        modeVfo.setOnClickListener(v -> setMem(false));
-        modeMem.setOnClickListener(v -> setMem(true));
+        // three toggles: a tap switches the state the button shows
+        modeBtn.setOnClickListener(v -> setMode(!cfg.m17()));
+        memBtn.setOnClickListener(v -> setMem(!(mem.memMode() && !mem.all().isEmpty())));
+        memBtn.setOnLongClickListener(v -> { storeMemory(null); return true; });
         powerBtn = findViewById(R.id.powerBtn);
         powerBtn.setOnClickListener(v -> { SettingsPageActivity.setHigh(cfg, !cfg.high()); st.applyChannel(); onState(); });
-        modeMem.setOnLongClickListener(v -> { storeMemory(null); return true; });
         findViewById(R.id.heardClear).setOnClickListener(v -> {
             synchronized (st.heard) { if (st.heard.isEmpty()) return; }
             new AlertDialog.Builder(this).setMessage("Clear the list of stations heard?")
@@ -393,7 +395,7 @@ public final class MainActivity extends Activity implements Station.Listener {
         topLabel.setText(st.isOpen() ? "M17 · listening" : "M17 · radio off");
         call.setText(st.isOpen() ? "Nothing heard yet" : "Radio off");
         call.setTextSize(24);
-        sub.setText(st.isOpen() ? "Streams and SMS show here as they arrive." : "Press Start to switch the radio on.");
+        sub.setText(st.isOpen() ? "Streams and SMS show here as they arrive." : "Tap the power icon at the top to switch the radio on.");
         cells.setVisibility(View.GONE); ((View) metaLabel.getParent()).setVisibility(View.GONE);
     }
 
@@ -590,21 +592,18 @@ public final class MainActivity extends Activity implements Station.Listener {
         }
         busyPopup();
         boolean m17 = cfg.m17();
-        modeFm.setSelected(!m17); modeM17.setSelected(m17);              // TalkBack says which
-        modeFm.setBackgroundResource(m17 ? 0 : R.drawable.seg_on); modeFm.setTextColor(m17 ? Ui.TEXT3 : Ui.ON_ORANGE);
-        modeM17.setBackgroundResource(m17 ? R.drawable.seg_on : 0); modeM17.setTextColor(m17 ? Ui.ON_ORANGE : Ui.TEXT3);
         boolean memOn = mem.memMode() && !mem.all().isEmpty();
-        modeVfo.setSelected(!memOn); modeMem.setSelected(memOn);
-        modeVfo.setBackgroundResource(memOn ? 0 : R.drawable.seg_on); modeVfo.setTextColor(memOn ? Ui.TEXT3 : Ui.ON_ORANGE);
-        modeMem.setBackgroundResource(memOn ? R.drawable.seg_on : 0); modeMem.setTextColor(memOn ? Ui.ON_ORANGE : Ui.TEXT3);
+        // the label is the state, a tap switches it. With MEM the memory decides the mode and the power: shown, not tappable
+        modeBtn.setText(m17 ? "M17" : "FM");
+        modeBtn.setContentDescription(memOn ? "Mode: " + (m17 ? "M17" : "FM") + ", set by the memory" : "Mode: " + (m17 ? "M17, double tap for FM" : "FM, double tap for M17"));
+        memBtn.setText(memOn ? "MEM" : "VFO");
+        memBtn.setContentDescription(memOn ? "Memory channel, double tap for VFO, long press stores the channel" : "VFO, double tap for memories, long press stores the channel");
+        for (View v : new View[] { modeBtn, powerBtn }) { v.setEnabled(!memOn); v.setAlpha(memOn ? 0.5f : 1f); }
         // MEM: the compact card takes the digits' place (they stay laid out, invisible, so the card keeps their height)
         memCard.setVisibility(memOn ? View.VISIBLE : View.GONE);
-        // the memory decides FM or M17, so the switch is hidden (kept in the layout, VFO/MEM stays put)
-        ((View) modeFm.getParent()).setVisibility(memOn ? View.INVISIBLE : View.VISIBLE);
-        powerBtn.setVisibility(memOn ? View.INVISIBLE : View.VISIBLE);
         boolean vfoOn = !memOn;
         if (vfoOn) {
-            shiftChip.setText(Memories.Ch.current(cfg).tag(true));
+            shiftChip.setText(Memories.Ch.current(cfg).chip());
             if (cfg.shift() != 0) {
                 int tx = cfg.txFreq(), r = cfg.region();
                 boolean ok = Config.tunable(tx) && Config.inBand(tx, r);
@@ -622,8 +621,10 @@ public final class MainActivity extends Activity implements Station.Listener {
         }
         boolean shifted = vfoOn;
         if ((shiftLine.getVisibility() == View.VISIBLE) != shifted) shiftLine.setVisibility(shifted ? View.VISIBLE : View.GONE);
-        powerBtn.setText(cfg.high() ? "HI" : "LO");
-        powerBtn.setContentDescription(cfg.high() ? "RF power: high, tap for low" : "RF power: low, tap for high");
+        powerIcon.setImageResource(cfg.high() ? R.drawable.ic_txpower_hi : R.drawable.ic_txpower_lo);
+        powerText.setText(cfg.high() ? "HI" : "LO");
+        powerBtn.setContentDescription(memOn ? "Transmit power: " + (cfg.high() ? "high" : "low") + ", set by the memory"
+                : cfg.high() ? "Transmit power: high, double tap for low" : "Transmit power: low, double tap for high");
         // MEM: the card is a little taller than the digits, for its three lines
         View fb = findViewById(R.id.freqHolder);
         int minH = memOn ? freq.getHeight() + Ui.dp(this, 24) : 0;
@@ -637,15 +638,15 @@ public final class MainActivity extends Activity implements Station.Listener {
             memCh.setText("CH" + (i + 1));
             memName.setText(c.name);
             memFreq.setText(c.dotted());
-            memTag.setText(c.tag());
+            memTag.setText(c.chip());
             if (freq.hz() != cfg.freq()) freq.setHz(cfg.freq());
         }
-        power.setText(st.isOpen() || st.isStarting() ? "Stop" : "Start");
+        power.setContentDescription(st.isOpen() || st.isStarting() ? "Stop the radio" : "Start the radio");
         String s;
         if (st.isFlashing()) s = "Loading firmware…";
         else if (st.isStarting()) s = "Starting the radio…";
-        else if (st.isOpen()) s = (m17 ? "M17" : "FM") + " \u00b7 " + st.moduleTag().replace("DMR006.U4A.", "")
-                + (m17 && !st.m17TxCapable() ? " \u00b7 receive only" : "");      // the bridge build is in Settings and the log
+        else if (st.isOpen()) s = st.moduleTag().replace("DMR006.U4A.", "")     // the mode is on its button, the bridge build in the log
+                + (m17 && !st.m17TxCapable() ? " \u00b7 M17 receive only" : "");
         else s = st.error().isEmpty() ? "" : "Start failed: " + st.error();      // "Radio off" is on the Live card already
         status.setText(s);
 
