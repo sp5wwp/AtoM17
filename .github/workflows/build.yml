@@ -70,9 +70,9 @@ jobs:
         run: |
           C=app/src/main/cpp; T=$C/third_party; N=$T/codec2-mod-neural
           gcc -O2 -std=gnu11 -w -DSUPPRESS_PERF_WARNINGS -o loopback tools/hosttest/loopback.c $C/m17tx.c $C/m17rx/src/*.c \
-            $T/libm17/m17.c $T/libm17/{decode,encode,math,payload,phy}/*.c $T/codec2-mod/src/*.c $T/micro-ecc/uECC.c \
+            $T/libm17/m17.c $T/libm17/{decode,encode,math,payload,phy}/*.c $T/codec2-mod/src/*.c $T/micro-ecc/uECC.c $T/sha-2/sha-256.c \
             $N/src/c2fargan.c $N/src/c2f_features.c $N/model/fargan_data.c $N/third_party/opus/dnn/{fargan,nnet,nnet_default,parse_lpcnet_weights}.c \
-            -I$C -I$C/m17rx/include -I$C/m17rx/src -I$T/libm17 -I$T/codec2-mod/inc -I$T/micro-ecc \
+            -I$C -I$C/m17rx/include -I$C/m17rx/src -I$T/libm17 -I$T/codec2-mod/inc -I$T/micro-ecc -I$T/sha-2 \
             -I$N/include -I$N/src -I$N/model -I$N/third_party/opus -I$N/third_party/opus/dnn -I$N/third_party/opus/celt -I$N/third_party/opus/include \
             -Itools/hosttest -lm
           ./loopback
