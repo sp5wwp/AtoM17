@@ -42,6 +42,14 @@ final class Station implements Radio.Events, Audio.Sink {
         final long at = System.currentTimeMillis();
         String kind = "stream";              // stream | sms | packet | bad
         String src = "", dst = "", text = "", sms = "", meta = "", gnss = "", ecd = "", sigKey = "";
+        /** Authentication Frame of a signed stream (M17 spec 2.1.0); sigTime 0: not received */
+        String sigSigner = "", sigDst = "";
+        long sigTime;                        // time of signing, Unix seconds (UTC)
+        boolean sigNotOriginator;            // the signer is not the station the stream names (ECD field 1, else SRC)
+        static final long SIG_TIME_WINDOW_S = 300;   // accepted offset from the phone's clock (spec default)
+        /** the phone's clock minus the time of signing, s */
+        long sigAge() { return at / 1000 - sigTime; }
+        boolean sigStale() { return sigTime != 0 && Math.abs(sigAge()) > SIG_TIME_WINDOW_S; }
         int can, enc, encSub, decrypt, sig = -1, frames, lost, metaKind, protocol;
         boolean signed, fromLich, ended;
         float duration, evm, ser = Float.NaN;   // evm, ser: the equaliser's (RxStats) at the end
@@ -440,6 +448,12 @@ final class Station implements Radio.Events, Audio.Sink {
                 r.ended = true; r.frames = e.getInt("frames"); r.lost = e.getInt("lost"); r.duration = (float) e.getDouble("duration");
                 RxStats.Snap q = rxStats.snap();                                 // the equaliser's, not libm17rx's (re-synthesised input)
                 r.evm = Float.isNaN(q.evm) ? 0 : q.evm; r.ser = q.ser; r.sig = r.signed ? e.getInt("sig") : -1; r.sigKey = e.getString("sigKey");
+                long st = e.optLong("sigTime", 0);
+                if (r.signed && st != 0) {
+                    r.sigTime = st + 1577836800L;   // seconds since 2020-01-01T00:00:00Z -> Unix time
+                    r.sigSigner = e.optString("sigSigner", ""); r.sigDst = e.optString("sigDst", "");
+                    r.sigNotOriginator = e.optInt("sigNotOriginator", 0) != 0;
+                }
                 current = null;
                 log("M17 " + r.src + " > " + r.dst + ": " + r.frames + " frames, " + String.format(java.util.Locale.US, "%.1f s", r.duration));
             } else if (kind == M17Native.EV_PACKET) {
@@ -861,7 +875,7 @@ final class Station implements Radio.Events, Audio.Sink {
             if (!symReset()) { log("M17: the symbol engine did not answer the reset"); return; }
             rec = testTone != null ? null : mic(320);
             if (rec == null && testTone == null) { log("no microphone (permission?)"); return; }
-            byte[] b = new byte[6 * 48];
+            byte[] b = new byte[7 * 48];   // the end: last frame, Authentication Frame, 4 signature frames, EoT
             s.leadIn(cfg.leadInMs());
             int begin = M17Native.txBegin(txh, b);
             if (begin < 0) { log("M17: the stream did not start (" + begin + "), with AES: no random numbers for the nonce"); return; }

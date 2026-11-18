@@ -31,7 +31,8 @@ M17 reception is benchmarked against a USRP B210 reference.
   * voice, link info, and SMS
   * META: multi-block text, GNSS position, extended callsign data (ECD)
   * AES-128/192/256 and 8/16/24-bit scrambler decryption
-  * ECDSA signature checks against stored public keys
+  * ECDSA signature checks against stored public keys (M17 Specification 2.1.0: SHA-256 stream hash and the
+    Authentication Frame, with the signer, destination and time of signing shown)
 * **Receive measurements** (Settings -> Diagnostics):
   * symbol error rate before FEC
   * equaliser EVM
@@ -47,7 +48,7 @@ M17 reception is benchmarked against a USRP B210 reference.
   They are taken on the equaliser: libm17rx decodes a re-synthesised signal, so its own EVM, deviation and offset
   would describe that instead. The Atom's audio path removes DC, so the carrier offset cannot be measured.
 * **M17 transmit** (needs a modified firmware in the module): Codec2 3200 voice, CAN, the same three META kinds (position from the
-  phone's GNSS), AES or scrambler, signed streams (key generated on the phone), and SMS (packet mode). All of it goes
+  phone's GNSS), AES or scrambler, signed streams (spec 2.1.0, key generated on the phone), and SMS (packet mode). All of it goes
   through the V076J symbol engine.
 * **Firmware:** loads V076J or restores the vendor V076 with SignalDeck's loader sequence. Both images are built on the
   phone from its own `/vendor/data/dmr/DMR006.U4A.V076.bin`. The APK carries only patches (`assets/*.patch.json`). The
@@ -66,9 +67,9 @@ Host test of the M17 core:
 ```
 C=app/src/main/cpp; T=$C/third_party; N=$T/codec2-mod-neural
 gcc -O2 -std=gnu11 -w -DSUPPRESS_PERF_WARNINGS -o loopback tools/hosttest/loopback.c $C/m17tx.c $C/m17rx/src/*.c \
-  $T/libm17/m17.c $T/libm17/{decode,encode,math,payload,phy}/*.c $T/codec2-mod/src/*.c $T/micro-ecc/uECC.c \
+  $T/libm17/m17.c $T/libm17/{decode,encode,math,payload,phy}/*.c $T/codec2-mod/src/*.c $T/micro-ecc/uECC.c $T/sha-2/sha-256.c \
   $N/src/c2fargan.c $N/src/c2f_features.c $N/model/fargan_data.c $N/third_party/opus/dnn/{fargan,nnet,nnet_default,parse_lpcnet_weights}.c \
-  -I$C -I$C/m17rx/include -I$C/m17rx/src -I$T/libm17 -I$T/codec2-mod/inc -I$T/micro-ecc \
+  -I$C -I$C/m17rx/include -I$C/m17rx/src -I$T/libm17 -I$T/codec2-mod/inc -I$T/micro-ecc -I$T/sha-2 \
   -I$N/include -I$N/src -I$N/model -I$N/third_party/opus -I$N/third_party/opus/dnn -I$N/third_party/opus/celt -I$N/third_party/opus/include \
   -Itools/hosttest -lm && ./loopback
 ```

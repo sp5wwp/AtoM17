@@ -14,9 +14,9 @@ set(NN_SRC ${NN}/src/c2fargan.c ${NN}/src/c2f_features.c ${NN}/model/fargan_data
            ${NN}/third_party/opus/dnn/nnet.c ${NN}/third_party/opus/dnn/nnet_default.c ${NN}/third_party/opus/dnn/parse_lpcnet_weights.c)
 file(GLOB M17RX_SRC ${CMAKE_CURRENT_SOURCE_DIR}/m17rx/src/*.c)
 
-add_library(atom17 SHARED atom17_jni.c m17tx.c ${M17RX_SRC} ${LIBM17_SRC} ${CODEC2_SRC} ${T}/micro-ecc/uECC.c ${NN_SRC})
+add_library(atom17 SHARED atom17_jni.c m17tx.c ${M17RX_SRC} ${LIBM17_SRC} ${CODEC2_SRC} ${T}/micro-ecc/uECC.c ${T}/sha-2/sha-256.c ${NN_SRC})
 target_include_directories(atom17 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/m17rx/include
-                           ${CMAKE_CURRENT_SOURCE_DIR}/m17rx/src ${T}/libm17 ${T}/codec2-mod/inc ${T}/micro-ecc
+                           ${CMAKE_CURRENT_SOURCE_DIR}/m17rx/src ${T}/libm17 ${T}/codec2-mod/inc ${T}/micro-ecc ${T}/sha-2
                            ${NN}/include ${NN}/src ${NN}/model ${NN}/third_party/opus ${NN}/third_party/opus/dnn
                            ${NN}/third_party/opus/celt ${NN}/third_party/opus/include)
 target_compile_definitions(atom17 PRIVATE M17RX_BUILD=1 SUPPRESS_PERF_WARNINGS)
@@ -26,7 +26,7 @@ target_compile_options(atom17 PRIVATE -O2)
 # warnings for AtoM17's own code, none for the vendored libraries
 set_property(SOURCE atom17_jni.c m17tx.c ${M17RX_SRC} APPEND PROPERTY COMPILE_OPTIONS -Wall -Wextra)
 set_property(SOURCE atom17_jni.c APPEND PROPERTY COMPILE_OPTIONS -Wno-unused-parameter)   # JNI: env and jclass
-set_property(SOURCE ${LIBM17_SRC} ${CODEC2_SRC} ${T}/micro-ecc/uECC.c ${NN_SRC} APPEND PROPERTY COMPILE_OPTIONS -w)
+set_property(SOURCE ${LIBM17_SRC} ${CODEC2_SRC} ${T}/micro-ecc/uECC.c ${T}/sha-2/sha-256.c ${NN_SRC} APPEND PROPERTY COMPILE_OPTIONS -w)
 target_link_libraries(atom17 m)
 
 add_executable(sdalsa sdalsa/sdalsa.c)

@@ -200,12 +200,14 @@ JNIEXPORT jstring JNICALL JF(rxNextEvent)(JNIEnv* env, jclass c, jlong p)
     size_t cap = 8192;
     char* b = malloc(cap);
     if (!b) { free(ev); return NULL; }
-    char key[64], sms[M17RX_PKT_MAX * 6 + 16];         /* every byte of an SMS escaped as at most \uXXXX */
+    char key[64], signer[32], sdst[32], sms[M17RX_PKT_MAX * 6 + 16];  /* every byte of an SMS escaped as at most \uXXXX */
     jesc(key, sizeof key, ev->sig_key);
+    jesc(signer, sizeof signer, ev->sig_signer);
+    jesc(sdst, sizeof sdst, ev->sig_dst);
     jesc(sms, sizeof sms, ev->sms);
-    int o = snprintf(b, cap, "{\"kind\":%d,\"end\":%d,\"frames\":%d,\"lost\":%d,\"duration\":%.2f,\"evm\":%.2f,\"sig\":%d,\"sigKey\":\"%s\",\"protocol\":%d,\"length\":%d,\"sms\":\"%s\",\"data\":\"",
+    int o = snprintf(b, cap, "{\"kind\":%d,\"end\":%d,\"frames\":%d,\"lost\":%d,\"duration\":%.2f,\"evm\":%.2f,\"sig\":%d,\"sigKey\":\"%s\",\"sigSigner\":\"%s\",\"sigDst\":\"%s\",\"sigTime\":%u,\"sigNotOriginator\":%d,\"protocol\":%d,\"length\":%d,\"sms\":\"%s\",\"data\":\"",
                      ev->kind, ev->end_reason, ev->frames, ev->frames_lost, ev->duration_s, ev->evm_rms_pct, ev->sig_state, key,
-                     ev->protocol, ev->length, sms);
+                     signer, sdst, (unsigned)ev->sig_time, ev->sig_not_originator, ev->protocol, ev->length, sms);
     for (int i = 0; i < ev->length && i < 64 && o + 4 < (int)cap; i++) o += snprintf(b + o, cap - (size_t)o, "%02X", ev->data[i]);
     o += snprintf(b + o, cap - (size_t)o, "\",\"link\":");
     o += link_json(b + o, cap - (size_t)o, &ev->link);
@@ -392,7 +394,7 @@ JNIEXPORT jint JNICALL JF(txVoice)(JNIEnv* env, jclass c, jlong p, jshortArray p
     (*env)->GetShortArrayRegion(env, pcm, 0, 320, s);
     return packed(env, out, sym, m17tx_stream_voice((m17tx_t*)(intptr_t)p, s, sym));
 }
-/* Last frame (+ signature) + EoT: up to 6 * 48 bytes. pcm may be null. */
+/* Last frame (+ Authentication Frame + signature) + EoT: up to 7 * 48 bytes. pcm may be null. */
 JNIEXPORT jint JNICALL JF(txEnd)(JNIEnv* env, jclass c, jlong p, jshortArray pcm, jbyteArray out)
 {
     int16_t s[320];

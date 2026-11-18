@@ -429,9 +429,12 @@ public final class MainActivity extends Activity implements Station.Listener {
             sealIcon.setContentDescription("Signed");
             if (live || r.sig < 0) sig = "Checked at end";
             else switch (r.sig) {
-                case 1: sig = "Valid" + (r.sigKey.isEmpty() ? "" : " · " + r.sigKey); sigColor = Ui.OK; break;
+                case 1: sig = "Valid" + (r.sigKey.isEmpty() ? "" : " · " + r.sigKey);
+                        if (r.sigNotOriginator || r.sigStale()) { sig += r.sigNotOriginator ? " · not the originator" : " · time off"; sigColor = Ui.WARN; }
+                        else sigColor = Ui.OK;
+                        break;
                 case 2: sig = "INVALID"; sigColor = Ui.BAD; break;
-                case 3: sig = "No public key"; sigColor = Ui.WARN; break;
+                case 3: sig = "No public key" + (r.sigSigner.isEmpty() ? "" : " for " + r.sigSigner); sigColor = Ui.WARN; break;
                 case 4: sig = "Not checkable (frames lost)"; sigColor = Ui.WARN; break;
                 default: sig = "Signature missing"; sigColor = Ui.WARN;
             }
@@ -740,7 +743,7 @@ public final class MainActivity extends Activity implements Station.Listener {
         if (!e.text.isEmpty()) b.append(" · “").append(e.text).append("”");
         if (e.posValid) b.append(" · position");
         if (!e.ecd2.isEmpty()) b.append(" · via ").append(e.ecd2);
-        if (e.signed && e.ended) b.append(e.sig == 1 ? " · signed ✓" : e.sig == 2 ? " · signature ✗" : " · signed ?");
+        if (e.signed && e.ended) b.append(e.sig == 1 ? (e.sigNotOriginator || e.sigStale() ? " · signed ✓ !" : " · signed ✓") : e.sig == 2 ? " · signature ✗" : " · signed ?");
         if (e.ended) b.append(String.format(Locale.US, " · %.1f s", e.duration)); else b.append(" · on air");
         return b.toString();
     }
@@ -767,7 +770,7 @@ public final class MainActivity extends Activity implements Station.Listener {
         return l;
     }
 
-    private static final String[] SIG = { "not signed", "signature VALID", "signature INVALID", "no public key for the sender", "signature not checkable (late join / lost frames)", "signature missing" };
+    private static final String[] SIG = { "not signed", "signature VALID", "signature INVALID", "no public key for the signer", "signature not checkable (late join / lost frames)", "signature missing" };
 
     private void details(Station.RxEntry e) {
         StringBuilder b = new StringBuilder();
@@ -785,6 +788,15 @@ public final class MainActivity extends Activity implements Station.Listener {
             if (!e.ecd.isEmpty()) b.append("\nextended callsign ").append(e.ecd);
             if (!e.meta.isEmpty()) b.append("\nMETA ").append(e.meta);
             if (e.signed && e.ended && e.sig >= 0 && e.sig < SIG.length) b.append("\n").append(SIG[e.sig]).append(e.sig == 1 && !e.sigKey.isEmpty() ? " (" + e.sigKey + ")" : "");
+            if (e.signed && e.ended && e.sigTime != 0) {
+                SimpleDateFormat utc = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US);
+                utc.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                b.append("\nsigned by ").append(e.sigSigner).append(" for ").append(e.sigDst).append(", ")
+                 .append(utc.format(new Date(e.sigTime * 1000))).append(" UTC");
+                if (e.sigStale()) b.append(String.format(Locale.US, "\n⚠ signed %+d s off the phone's clock: check the clock, or this may be a replayed transmission", e.sigAge()));
+                if (e.sigNotOriginator) b.append("\n⚠ signed by ").append(e.sigSigner).append(", not by the station the stream names (")
+                                        .append(e.ecd1.isEmpty() ? e.src : e.ecd1).append(")");
+            }
             if (e.fromLich) b.append("\nlink setup rebuilt from LICH (joined late)");
         } else b.append("\n").append(e.sms);
         TextView t = Ui.text(this, b.toString(), 14, Ui.WHITE, false);

@@ -60,8 +60,8 @@ int      m17tx_configure(m17tx_t* tx, const m17tx_config_t* cfg);
 int      m17tx_stream_begin(m17tx_t* tx, int8_t* out);
 /* One 40 ms stream frame from 320 samples of 8 kHz mono PCM (two Codec2 3200 frames). Returns 192. */
 int      m17tx_stream_voice(m17tx_t* tx, const int16_t pcm[320], int8_t* out);
-/* The end of the stream: last frame (EOS), the 4 signature frames when signed, and the EoT marker. `pcm` may be
-   NULL (silence). Returns the symbol count (at most 6 * 192). */
+/* The end of the stream: last frame (EOS), the Authentication Frame and the 4 signature frames when signed
+   (M17 spec 2.1.0), and the EoT marker. `pcm` may be NULL (silence). Returns the symbol count (at most 7 * 192). */
 int      m17tx_stream_end(m17tx_t* tx, const int16_t* pcm, int8_t* out);
 
 /* Packet mode: one SMS (protocol 0x05). Writes preamble, LSF, packet frames and EoT; returns the symbol count or a

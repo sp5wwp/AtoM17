@@ -1,8 +1,9 @@
 /*
  * AtoM17 - M17 transmit encoder. See m17tx.h.
- * Framing, META latching, AES-CTR nonce, scrambler, stream digest and signature follow gr-m17's m17_coder_impl.cc
+ * Framing, META latching, AES-CTR nonce, scrambler, stream hash and signature follow gr-m17's m17_coder_impl.cc
  * (Copyright 2023 jmfriedt, 2024-2026 Wojciech Kaczmarski, GPL-3.0-or-later), rewritten for a pull-style C API.
- * AES, the scrambler and the digest are the receiver's (m17rx/src/crypto.c), the code that decrypts and checks them.
+ * AES and the scrambler are the receiver's (m17rx/src/crypto.c), the stream hash is m17rx/src/m17sig.c (spec 2.1.0):
+ * the code that decrypts and checks them.
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -19,6 +20,7 @@
 #include "m17.h"
 #include "codec2_mod.h"
 #include "crypto.h"
+#include "m17sig.h"
 #include "uECC.h"
 
 #define PAYLOAD_BYTES 16
@@ -36,7 +38,7 @@ struct m17tx
     int meta_blocks, meta_idx;
     uint16_t fn;
     uint8_t lich_cnt;
-    uint8_t digest[PAYLOAD_BYTES];
+    m17sig_ctx_t sig_ctx; /* stream hash; holds pointers into itself, the struct is never copied */
     uint32_t scram_state;
     int scram_subtype;
     int aes_subtype;
@@ -222,7 +224,7 @@ int m17tx_stream_begin(m17tx_t* tx, int8_t* out)
     tx->fn = 0;
     tx->lich_cnt = 0;
     tx->meta_idx = 0;
-    memset(tx->digest, 0, sizeof(tx->digest));
+    m17sig_init(&tx->sig_ctx);
     tx->scram_state = tx->cfg.scram_seed;
     codec2_encoder_init(&tx->c2);
     if (latch_lsf(tx, 1) < 0) return -1;
@@ -253,9 +255,9 @@ int m17tx_stream_voice(m17tx_t* tx, const int16_t pcm[320], int8_t* out)
     encode_voice(tx, pcm, data);
     encrypt_payload(tx, data);
     gen_frame_i8(out, data, FRAME_STR, &tx->lsf_tx, tx->lich_cnt, tx->fn);
+    if (tx->cfg.sign) m17sig_frame(&tx->sig_ctx, tx->fn, data); /* FN and payload as transmitted */
     tx->fn = (tx->fn + 1) % 0x8000;
     tx->lich_cnt = (tx->lich_cnt + 1) % 6;
-    if (tx->cfg.sign) m17_digest_update(tx->digest, data);
     if (tx->lich_cnt == 0)
     {
         if (tx->meta_blocks > 1) tx->meta_idx = (tx->meta_idx + 1) % tx->meta_blocks;
@@ -277,10 +279,20 @@ int m17tx_stream_end(m17tx_t* tx, const int16_t* pcm, int8_t* out)
     tx->lich_cnt = (tx->lich_cnt + 1) % 6;
     if (tx->cfg.sign)
     {
-        uint8_t sig[64];
-        m17_digest_update(tx->digest, data);
-        uECC_sign(tx->cfg.priv_key, tx->digest, sizeof(tx->digest), sig, uECC_secp256r1());
-        fn = 0x7FFC;
+        uint8_t sig[64], hash[M17SIG_HASH_LEN], auth[PAYLOAD_BYTES];
+        m17sig_frame(&tx->sig_ctx, fn, data);
+
+        /* Authentication Frame (FN 7FFB): signer, destination, time of signing; not encrypted */
+        m17sig_auth_build(auth, tx->lsf_tx.src, tx->lsf_tx.dst, (uint32_t)(time(NULL) - M17SIG_EPOCH));
+        gen_frame_i8(out + n, auth, FRAME_STR, &tx->lsf_tx, tx->lich_cnt, M17SIG_FN_AUTH);
+        n += SYM_PER_FRA;
+        tx->lich_cnt = (tx->lich_cnt + 1) % 6;
+        m17sig_frame(&tx->sig_ctx, M17SIG_FN_AUTH, auth);
+
+        m17sig_final(&tx->sig_ctx, hash);
+        if (!uECC_sign(tx->cfg.priv_key, hash, sizeof(hash), sig, uECC_secp256r1()))
+            memset(sig, 0, sizeof(sig)); /* no random numbers: a signature that won't verify, never a wrong one */
+        fn = M17SIG_FN_SIG;
         for (int i = 0; i < 4; i++)
         {
             gen_frame_i8(out + n, &sig[i * PAYLOAD_BYTES], FRAME_STR, &tx->lsf_tx, tx->lich_cnt, fn);

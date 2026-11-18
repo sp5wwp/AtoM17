@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "m17tx.h"
 #include "m17rx.h"
@@ -55,7 +56,7 @@ static float* modulate(const int8_t* sym, int n, int* out_n, float dev_outer, fl
     return o;
 }
 
-typedef struct { int starts, ends, sig_state, packets; char src[12], dst[12], text[64], sms[900]; int dec; int frames; int audio; float dev; int enc; int pkt_meta, pkt_pos; double lat, lon; } result_t;
+typedef struct { int starts, ends, sig_state, packets; char src[12], dst[12], text[64], sms[900]; int dec; int frames; int audio; float dev; int enc; int pkt_meta, pkt_pos; double lat, lon; char sig_signer[12], sig_dst[12]; unsigned sig_time; int sig_not_orig; } result_t;
 
 static int use_agc;
 static result_t run(m17rx_t* rx, const int8_t* sym, int n, float noise, float scale)
@@ -77,7 +78,8 @@ static result_t run(m17rx_t* rx, const int8_t* sym, int n, float noise, float sc
         {
             if (ev.kind == M17RX_EV_STREAM_START) { r.starts++; strcpy(r.src, ev.link.src); strcpy(r.dst, ev.link.dst); r.enc = ev.link.enc_type; r.dec = ev.link.decrypt; }
             if (ev.kind == M17RX_EV_LINK_UPDATE && ev.link.meta_text_complete) strcpy(r.text, ev.link.meta_text);
-            if (ev.kind == M17RX_EV_STREAM_END) { r.ends++; r.sig_state = ev.sig_state; r.frames = ev.frames; if (ev.link.meta_text[0]) strcpy(r.text, ev.link.meta_text); }
+            if (ev.kind == M17RX_EV_STREAM_END) { r.ends++; r.sig_state = ev.sig_state; r.frames = ev.frames; if (ev.link.meta_text[0]) strcpy(r.text, ev.link.meta_text);
+                                              strcpy(r.sig_signer, ev.sig_signer); strcpy(r.sig_dst, ev.sig_dst); r.sig_time = ev.sig_time; r.sig_not_orig = ev.sig_not_originator; }
             if (ev.kind == M17RX_EV_PACKET) { r.packets++; strcpy(r.src, ev.link.src); strcpy(r.dst, ev.link.dst); strcpy(r.sms, ev.sms);
                                               r.pkt_meta = ev.link.meta_kind; r.pkt_pos = ev.link.gnss_valid_pos; r.lat = ev.link.gnss_lat; r.lon = ev.link.gnss_lon; }
         }
@@ -91,7 +93,8 @@ static result_t run(m17rx_t* rx, const int8_t* sym, int n, float noise, float sc
         m17rx_event_t ev;
         while (m17rx_next_event(rx, &ev))
         {
-            if (ev.kind == M17RX_EV_STREAM_END) { r.ends++; r.sig_state = ev.sig_state; r.frames = ev.frames; if (ev.link.meta_text[0]) strcpy(r.text, ev.link.meta_text); }
+            if (ev.kind == M17RX_EV_STREAM_END) { r.ends++; r.sig_state = ev.sig_state; r.frames = ev.frames; if (ev.link.meta_text[0]) strcpy(r.text, ev.link.meta_text);
+                                              strcpy(r.sig_signer, ev.sig_signer); strcpy(r.sig_dst, ev.sig_dst); r.sig_time = ev.sig_time; r.sig_not_orig = ev.sig_not_originator; }
             if (ev.kind == M17RX_EV_PACKET) { r.packets++; strcpy(r.sms, ev.sms); }
         }
     }
@@ -235,6 +238,11 @@ int main(void)
     n = voice_tx(tx, 25);
     r = run(rx, symbuf, n, 0, 1.0f);
     CHECK(r.sig_state == M17RX_SIG_VALID, "signed: sig_state=%d (1 = valid)", r.sig_state);
+    {
+        long age = (long)time(NULL) - 1577836800L - (long)r.sig_time;
+        CHECK(!strcmp(r.sig_signer, "SP5WWP") && !strcmp(r.sig_dst, "@ALL") && age >= 0 && age < 60 && r.sig_not_orig == 0,
+              "signed: Authentication Frame signer=%s dst=%s, signed %ld s ago, not_originator=%d", r.sig_signer, r.sig_dst, age, r.sig_not_orig);
+    }
     m17rx_clear_public_keys(rx); uint8_t other[32], opub[64]; m17tx_make_key(other, opub); m17rx_add_public_key(rx, "SP5WWP", opub, 64); m17rx_reset(rx);
     r = run(rx, symbuf, n, 0, 1.0f);
     CHECK(r.sig_state == M17RX_SIG_INVALID, "signed, wrong key: sig_state=%d (2 = invalid)", r.sig_state);
