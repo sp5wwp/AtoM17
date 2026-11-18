@@ -54,8 +54,9 @@ M17 reception is benchmarked against a USRP B210 reference.
   phone from its own `/vendor/data/dmr/DMR006.U4A.V076.bin`. The APK carries only patches (`assets/*.patch.json`). The
   P1 loader bridge is built the same way from `/vendor/data/mcu/20201016161541.bin`.
 
-Libraries: libm17 1.4.3 (`49c3010`), Codec2-mod `split-no-doubles` (`1e5d642`), micro-ecc (M17 fork), libm17rx
-from `m17_sdrsharp` (`10be6e8`). The TX encoder (`app/src/main/cpp/m17tx.c`) follows gr-m17's `m17_coder`.
+Libraries: libm17 1.4.3 (`49c3010`), Codec2-mod `split-no-doubles` (`1e5d642`), micro-ecc (M17 fork), sha-2
+(`565f650`, SHA-256 for the stream signatures), libm17rx from `m17_sdrsharp` (`10be6e8`, with the spec 2.1.0
+signature changes of `9f6d888`). The TX encoder (`app/src/main/cpp/m17tx.c`) follows gr-m17's `m17_coder`.
 
 ## Build
 
